@@ -12,7 +12,7 @@
 <script src="https://unpkg.com/3d-force-graph@1.73.4/dist/3d-force-graph.min.js"></script>
 <style>
 /* ══════════════════════════════════════════════════════════
-   ECO.SYSTEM.OS  ·  Governance Mapper  ·  v1.032
+   ECO.SYSTEM.OS  ·  Governance Mapper  ·  v1.033
    UI: Editorial Swiss — inspired by Pacifica / Harry Atkins
    Palette: Pure white UI · Black canvas · Grayscale midtones
    ══════════════════════════════════════════════════════════ */
@@ -22,29 +22,29 @@
 :root {
   --font:         'Sunflower', 'Helvetica Neue', sans-serif;
 
-  /* UI surfaces — white world */
-  --ui-bg:        #ffffff;
-  --ui-bg2:       #f4f4f4;
-  --ui-bg3:       #ebebeb;
-  --ui-line:      #d8d8d8;
-  --ui-line-hi:   #b0b0b0;
-  --ui-line-lo:   #eeeeee;
+  /* UI surfaces — dark world */
+  --ui-bg:        #111111;
+  --ui-bg2:       #191919;
+  --ui-bg3:       #222222;
+  --ui-line:      #2a2a2a;
+  --ui-line-hi:   #3c3c3c;
+  --ui-line-lo:   #1e1e1e;
 
   /* Text */
-  --ink:          #0a0a0a;
-  --ink-2:        #404040;
-  --ink-3:        #808080;
-  --ink-4:        #b0b0b0;
+  --ink:          #e8e8e8;
+  --ink-2:        #b0b0b0;
+  --ink-3:        #707070;
+  --ink-4:        #484848;
 
-  /* Canvas — black void where the graph lives */
-  --canvas-bg:    #080808;
+  /* Canvas — deep black void */
+  --canvas-bg:    #060606;
 
   /* Accent — used sparingly */
-  --accent:       #0a0a0a;
+  --accent:       #e8e8e8;
   --accent-blue:  #2203ff;
 
   /* Graph node / link defaults */
-  --node-default: #d8d8d8;
+  --node-default: #505050;
 
   --radius: 0px;
   --r-sm:   2px;
@@ -169,7 +169,7 @@ body { display: flex; flex-direction: column; }
   margin: 0 4px;
 }
 .tbtn.primary::after { display: none; }
-.tbtn.primary:hover { background: #222; color: #fff; }
+.tbtn.primary:hover { background: #c8c8c8; color: #0a0a0a; }
 .tbtn-icon {
   width: 32px; height: 42px; padding: 0;
   display: inline-flex; align-items: center; justify-content: center;
@@ -502,7 +502,7 @@ svg#graph:active { cursor: grabbing; }
   width: 260px;
   height: 100%;
   background: var(--ui-bg);
-  border-left: 1px solid rgba(255,255,255,0.1);
+  border-left: 1px solid var(--ui-line);
   z-index: 40;
   display: flex;
   flex-direction: column;
@@ -1028,8 +1028,8 @@ input#m-importance::-moz-range-thumb {
   transition: all 0.1s;
 }
 .mbtn:hover { border-color: var(--ink); color: var(--ink); }
-.mbtn.primary { background: var(--ink); color: #fff; border-color: var(--ink); }
-.mbtn.primary:hover { background: #222; }
+.mbtn.primary { background: var(--ink); color: #111; border-color: var(--ink); }
+.mbtn.primary:hover { background: #c8c8c8; }
 .mbtn.danger { color: #cc2222; border-color: rgba(204,34,34,0.2); }
 .mbtn.danger:hover { background: rgba(204,34,34,0.06); border-color: #cc2222; }
 
@@ -1334,7 +1334,7 @@ input#m-importance::-moz-range-thumb {
 <div id="footer">
   <span class="footer-copy">ECO.SYSTEM.OS · For personal use only</span>
   <span>© Constantinos Tolias 2026</span>
-  <span class="footer-ver">v1.032</span>
+  <span class="footer-ver">v1.033</span>
 </div>
 
 <div id="tooltip"></div>
@@ -1470,7 +1470,7 @@ input#m-importance::-moz-range-thumb {
 </div>
 <script>
 // ════════════════════════════════════════════════════════════
-//  ECO.SYSTEM.OS — Governance Network Mapper  v1.032
+//  ECO.SYSTEM.OS — Governance Network Mapper  v1.033
 // ════════════════════════════════════════════════════════════
 
 // ── Constants ─────────────────────────────────────────────
@@ -2838,8 +2838,23 @@ document.getElementById('btn-zoom-fit').onclick=doZoomFit;
 // ── TOOLBAR ACTIONS ────────────────────────────────────────
 document.getElementById('btn-add').onclick=()=>openModal(uid());
 document.getElementById('btn-reset-layout').onclick=()=>{
-  nodes.forEach(n=>{if(!n.pinned){n.x=(Math.random()-0.5)*300;n.y=(Math.random()-0.5)*300;n.vx=0;n.vy=0;}});
-  simulation.alpha(1).restart();notify('Layout reset');
+  if(is3D && graph3D){
+    // Scramble 3D positions so force re-spreads nodes
+    const gd = graph3D.graphData();
+    gd.nodes.forEach(n=>{
+      n.x=(Math.random()-0.5)*400;
+      n.y=(Math.random()-0.5)*400;
+      n.z=(Math.random()-0.5)*400;
+      n.vx=n.vy=n.vz=0;
+    });
+    graph3D.graphData(gd);
+    graph3D.d3ReheatSimulation();
+    notify('3D layout reset');
+  } else {
+    nodes.forEach(n=>{if(!n.pinned){n.x=(Math.random()-0.5)*300;n.y=(Math.random()-0.5)*300;n.vx=0;n.vy=0;}});
+    simulation.alpha(1).restart();
+    notify('Layout reset');
+  }
 };
 document.getElementById('btn-toggle-filters').addEventListener('click',function(){
   filterBarVisible=!filterBarVisible;
