@@ -2951,7 +2951,8 @@ document.getElementById('vi-network').addEventListener('click', function() {
   if (is3D)      { disable3D();    is3D=false;    document.getElementById('vi-chk-3d').textContent=' '; }
   if (isCluster) { disableRings(); isCluster=false; document.getElementById('vi-chk-cluster').textContent=' '; }
   document.getElementById('vi-chk-network').textContent = '✓';
-  simulation.alpha(0.3).restart();
+  // disableRings() already fires a full alpha(1) restart; only need this for 3D exit
+  if (!isCluster) simulation.alpha(1).alphaDecay(0.028).restart();
   visualsPanel.classList.remove('show');
   notify('Network view activated');
 });
@@ -3010,7 +3011,18 @@ function disableRings() {
   ringForceActive = false;
   document.getElementById('mode-indicator').style.display = 'none';
   svg2D.select('#ring-deco-layer').remove();
-  // Restore original forces
+  // Scatter nodes back toward center so free-layout forces can reorganize
+  // without being anchored to their ring geometry
+  nodes.forEach(n => {
+    if (n.fx != null) return; // leave pinned nodes alone
+    const dist = Math.sqrt((n.x||0)*(n.x||0) + (n.y||0)*(n.y||0)) || 1;
+    const pull = 0.25; // how far to collapse toward origin (0 = origin, 1 = stay)
+    n.x = (n.x || 0) * pull + (Math.random() - 0.5) * 80;
+    n.y = (n.y || 0) * pull + (Math.random() - 0.5) * 80;
+    n.vx = (Math.random() - 0.5) * 12;
+    n.vy = (Math.random() - 0.5) * 12;
+  });
+  // Restore original forces with a full-strength alpha
   simulation
     .force('charge',    d3.forceManyBody().strength(d => -150 - d.importance * 1.5))
     .force('link',      d3.forceLink().id(d => d.id).distance(d => {
@@ -3021,7 +3033,7 @@ function disableRings() {
     }).strength(0.4))
     .force('rings',     null)
     .force('collision', d3.forceCollide().radius(d => nodeRadius(d.importance) + 16).strength(0.85))
-    .alpha(0.6).alphaDecay(0.028).restart();
+    .alpha(1).alphaDecay(0.028).restart();
 }
 
 function drawRingDecorations() {
