@@ -1559,6 +1559,8 @@ let filterBarVisible = false;
 let is3D = false;
 let isCluster = false;
 let graph3D = null;
+let savedNetworkPos = null; // snapshot of Network node positions
+let savedRingsPos   = null; // snapshot of Rings node positions
 let currentOwners = [];
 let currentTags = [];
 let linksAnimating = true; // false = particles frozen
@@ -2477,25 +2479,51 @@ function undoDelete() {
 
 // ── 3D GRAPH ───────────────────────────────────────────────
 // ── SHARED: scatter nodes to neutral before any view switch ──
-function resetNodePositions() {
+// ── Per-view position persistence ─────────────────────────
+function capturePos() {
+  const m = {};
+  nodes.forEach(n => { m[n.id] = { x: n.x || 0, y: n.y || 0 }; });
+  return m;
+}
+function applyPos(map) {
+  // Returns true if every current node had a saved position
+  let allFound = true;
   nodes.forEach(n => {
     if (n.fx != null) return; // leave pinned nodes alone
+    const s = map && map[n.id];
+    if (s) { n.x = s.x; n.y = s.y; n.vx = 0; n.vy = 0; }
+    else    { allFound = false; }
+  });
+  return allFound;
+}
+function scatterNodes() {
+  nodes.forEach(n => {
+    if (n.fx != null) return;
     const angle = Math.random() * Math.PI * 2;
-    const r = Math.random() * 120;
-    n.x  = Math.cos(angle) * r;
-    n.y  = Math.sin(angle) * r;
-    n.vx = (Math.random() - 0.5) * 6;
-    n.vy = (Math.random() - 0.5) * 6;
+    const r     = Math.random() * 80;
+    n.x = Math.cos(angle) * r; n.y = Math.sin(angle) * r;
+    n.vx = 0; n.vy = 0;
   });
 }
+// Kept as alias for any remaining callers
+function resetNodePositions() { scatterNodes(); }
 
 function enable3D() {
-  if(isCluster){ disableRings(); isCluster=false; document.getElementById('vi-chk-cluster').textContent=' '; }
+  if(isCluster){ savedRingsPos = capturePos(); disableRings(); isCluster=false; document.getElementById('vi-chk-cluster').textContent=' '; }
+  else          { savedNetworkPos = capturePos(); }
   document.getElementById('graph').style.display='none';
   const c=document.getElementById('graph-3d');c.style.display='block';
   document.getElementById('mode-indicator').textContent='3D MODE';
   document.getElementById('mode-indicator').style.display='block';
   if(simulation)simulation.stop();
+
+  // If the instance already exists, just sync data and reheat — preserves camera + layout
+  if(graph3D){
+    refresh3D();
+    graph3D.linkDirectionalParticles(linksAnimating ? 2 : 0);
+    graph3D.d3ReheatSimulation();
+    return;
+  }
 
   const gData={
     nodes:nodes.map(n=>({id:n.id,name:n.name,importance:n.importance,type:n.type,color:getNodeColor(n),status:n.status})),
@@ -2540,14 +2568,34 @@ function enable3D() {
 
 function disable3D() {
   document.getElementById('graph').style.display='';
-  const c=document.getElementById('graph-3d');c.style.display='none';
+  const c=document.getElementById('graph-3d');
+  c.style.display='none'; // hide but do NOT destroy — preserves 3D camera + layout
   document.getElementById('mode-indicator').style.display='none';
-  if(graph3D){try{c.innerHTML='';}catch(e){}graph3D=null;}
-  resetNodePositions();
-  if(simulation)simulation.alpha(1).alphaDecay(0.028).restart();
+  // Restore Network layout; alpha depends on whether we have a saved snapshot
+  const hasSaved = savedNetworkPos && applyPos(savedNetworkPos);
+  if (!hasSaved) scatterNodes();
+  restoreNetworkForces(hasSaved ? 0.15 : 0.9);
 }
 
-function refresh3D() {
+function restoreNetworkForces(alpha) {
+  simulation
+    .force('link',      d3.forceLink().id(d => d.id)
+      .distance(d => {
+        const s = nodes.find(n => n.id === (typeof d.source==='object'?d.source.id:d.source));
+        const t = nodes.find(n => n.id === (typeof d.target==='object'?d.target.id:d.target));
+        const mi = s && t ? Math.min(s.importance, t.importance) : 50;
+        return 60 + mi * 0.8;
+      }).strength(0.4))
+    .force('charge',    d3.forceManyBody().strength(d => -150 - d.importance * 1.5))
+    .force('collision', d3.forceCollide().radius(d => nodeRadius(d.importance) + 16).strength(0.85))
+    .force('center',    d3.forceCenter(0, 0))
+    .force('rings',     null);
+  simulation.nodes(nodes);
+  simulation.force('link').links(links);
+  simulation.alpha(alpha).alphaDecay(0.028).restart();
+}
+
+
   if(!graph3D)return;
   graph3D.graphData({
     nodes:nodes.map(n=>({id:n.id,name:n.name,importance:n.importance,type:n.type,color:getNodeColor(n),status:n.status})),
@@ -2956,70 +3004,42 @@ document.getElementById('btn-links-toggle').addEventListener('click', function()
 });
 
 document.getElementById('vi-3d').addEventListener('click',function(){
-  if(isCluster){ disableRings(); isCluster=false; document.getElementById('vi-chk-cluster').textContent=' '; }
+  if(isCluster){ savedRingsPos = capturePos(); disableRings(); isCluster=false; document.getElementById('vi-chk-cluster').textContent=' '; }
   is3D=!is3D;
   document.getElementById('vi-chk-3d').textContent=is3D?'✓':' ';
   document.getElementById('vi-chk-network').textContent=is3D?' ':'✓';
-  if(is3D)enable3D();
-  else{disable3D();simulation.alpha(0.3).restart();}
+  if(is3D){ enable3D(); }
+  else    { disable3D(); }
   visualsPanel.classList.remove('show');
-  notify(is3D?'3D force graph activated':'Back to 2D');
+  notify(is3D?'3D Force Graph':'Network view');
 });
 
 // ── NETWORK VIEW (Default) ─────────────────────────────────
 document.getElementById('vi-network').addEventListener('click', function() {
-  // ── Tear down any active view ──────────────────────────────
+  // Save the layout of whatever view we're leaving
+  if (isCluster) {
+    savedRingsPos = capturePos();
+    disableRings(); isCluster = false;
+    document.getElementById('vi-chk-cluster').textContent = ' ';
+  }
   if (is3D) {
+    // 3D: just hide (keep alive), no 2D positions to save
     is3D = false;
     document.getElementById('vi-chk-3d').textContent = ' ';
     document.getElementById('graph').style.display = '';
-    const c = document.getElementById('graph-3d');
-    c.style.display = 'none';
-    if (graph3D) { try { c.innerHTML = ''; } catch(e) {} graph3D = null; }
+    document.getElementById('graph-3d').style.display = 'none';
+    document.getElementById('mode-indicator').style.display = 'none';
+    if (simulation) simulation.stop();
   }
-  if (isCluster) {
-    isCluster = false;
-    ringForceActive = false;
-    document.getElementById('vi-chk-cluster').textContent = ' ';
-    svg2D.select('#ring-deco-layer').remove();
-  }
-  document.getElementById('mode-indicator').style.display = 'none';
   document.getElementById('vi-chk-network').textContent = '✓';
 
-  // ── Scatter every non-pinned node to a neutral position ────
-  // Identical starting geometry to a fresh page load
-  nodes.forEach(n => {
-    if (n.fx != null) return;
-    const angle = Math.random() * Math.PI * 2;
-    const r     = Math.random() * 80;
-    n.x  = Math.cos(angle) * r;
-    n.y  = Math.sin(angle) * r;
-    n.vx = 0;
-    n.vy = 0;
-  });
-
-  // ── Restore forces exactly as initGraph() sets them ────────
-  simulation
-    .force('link',      d3.forceLink().id(d => d.id)
-      .distance(d => {
-        const s = nodes.find(n => n.id === (typeof d.source==='object' ? d.source.id : d.source));
-        const t = nodes.find(n => n.id === (typeof d.target==='object' ? d.target.id : d.target));
-        const mi = s && t ? Math.min(s.importance, t.importance) : 50;
-        return 60 + mi * 0.8;
-      })
-      .strength(0.4))
-    .force('charge',    d3.forceManyBody().strength(d => -150 - d.importance * 1.5))
-    .force('collision', d3.forceCollide().radius(d => nodeRadius(d.importance) + 16).strength(0.85))
-    .force('center',    d3.forceCenter(0, 0))
-    .force('rings',     null);
-
-  // Rebind current node + link data so the simulation is fully fresh
-  simulation.nodes(nodes);
-  simulation.force('link').links(links);
-  simulation.alpha(0.9).alphaDecay(0.028).restart();
+  // Restore last Network layout if we have one; otherwise scatter fresh
+  const hasSaved = savedNetworkPos && applyPos(savedNetworkPos);
+  if (!hasSaved) scatterNodes();
+  restoreNetworkForces(hasSaved ? 0.15 : 0.9);
 
   visualsPanel.classList.remove('show');
-  notify('Network view reset');
+  notify('Network view');
 });
 
 // ── IMPORTANCE RINGS VIEW ──────────────────────────────────
@@ -3060,11 +3080,13 @@ function ringForce(alpha) {
 
 function enableRings() {
   if (is3D) { disable3D(); is3D = false; document.getElementById('vi-chk-3d').textContent = ' '; }
+  else { savedNetworkPos = capturePos(); } // save Network layout before leaving
   ringForceActive = true;
   document.getElementById('mode-indicator').textContent = 'IMPORTANCE RINGS';
   document.getElementById('mode-indicator').style.display = 'block';
-  // Scatter to neutral before applying ring forces
-  resetNodePositions();
+  // Restore last Rings layout if available; otherwise scatter fresh
+  const hasSaved = savedRingsPos && applyPos(savedRingsPos);
+  if (!hasSaved) scatterNodes();
   simulation
     .force('charge',    d3.forceManyBody().strength(d => -35 - (d.importance || 50) * 0.35))
     .force('link',      d3.forceLink().id(d => d.id).distance(24).strength(0.06))
@@ -3073,7 +3095,7 @@ function enableRings() {
     .force('collision', d3.forceCollide().radius(d => nodeRadius(d.importance || 50) + 9).strength(0.95));
   simulation.nodes(nodes);
   simulation.force('link').links(links);
-  simulation.alpha(1).alphaDecay(0.01).restart();
+  simulation.alpha(hasSaved ? 0.15 : 1).alphaDecay(0.01).restart();
   drawRingDecorations();
 }
 
@@ -3118,23 +3140,15 @@ document.getElementById('vi-cluster').addEventListener('click', function() {
   if (isCluster) {
     enableRings();
   } else {
-    // Turning rings off → go back to Network with a clean reset
+    // Save Rings layout, restore Network layout
+    savedRingsPos = capturePos();
     disableRings();
-    resetNodePositions();
-    simulation
-      .force('charge',    d3.forceManyBody().strength(d => -150 - d.importance * 1.5))
-      .force('link',      d3.forceLink().id(d => d.id).distance(d => {
-        const s = nodes.find(n => n.id === (typeof d.source==='object'?d.source.id:d.source));
-        const t = nodes.find(n => n.id === (typeof d.target==='object'?d.target.id:d.target));
-        const mi = s && t ? Math.min(s.importance, t.importance) : 50;
-        return 60 + mi * 0.8;
-      }).strength(0.4))
-      .force('rings',     null)
-      .force('collision', d3.forceCollide().radius(d => nodeRadius(d.importance) + 16).strength(0.85))
-      .alpha(1).alphaDecay(0.028).restart();
+    const hasSaved = savedNetworkPos && applyPos(savedNetworkPos);
+    if (!hasSaved) scatterNodes();
+    restoreNetworkForces(hasSaved ? 0.15 : 0.9);
   }
   visualsPanel.classList.remove('show');
-  notify(isCluster ? 'Importance Rings activated' : 'Back to Network layout');
+  notify(isCluster ? 'Importance Rings' : 'Network view');
 });
 
 // ── SAVE DROPDOWN ──────────────────────────────────────────
