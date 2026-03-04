@@ -12,7 +12,7 @@
 <script src="https://unpkg.com/3d-force-graph@1.73.4/dist/3d-force-graph.min.js"></script>
 <style>
 /* ══════════════════════════════════════════════════════════
-   ECO.SYSTEM.OS  ·  Governance Mapper  ·  v1.037
+   ECO.SYSTEM.OS  ·  Governance Mapper  ·  v1.038
    UI: Editorial Swiss — inspired by Pacifica / Harry Atkins
    Palette: Pure white UI · Black canvas · Grayscale midtones
    ══════════════════════════════════════════════════════════ */
@@ -828,7 +828,7 @@ svg#graph:active { cursor: grabbing; }
   background: var(--ui-bg);
   border: 1px solid var(--ui-line-hi);
   border-top: 2px solid var(--ink);
-  width: min(680px, 94vw); max-width: 94vw; max-height: 92vh;
+  width: min(820px, 96vw); max-width: 96vw; max-height: 92vh;
   overflow-y: auto;
   padding: 28px 32px;
   position: relative;
@@ -1024,6 +1024,18 @@ input#m-importance::-moz-range-thumb {
 .pin-row input[type="checkbox"] { accent-color: var(--ink); cursor: pointer; }
 
 .modal-meta { font-size: 8px; font-weight: 300; color: var(--ink-4); margin-top: 4px; display: flex; gap: 14px; }
+/* Modal two-column layout */
+.modal-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 28px;
+  align-items: start;
+}
+.modal-col { min-width: 0; }
+@media (max-width: 640px) {
+  .modal-cols { grid-template-columns: 1fr; gap: 0; }
+}
+
 .modal-actions { display: flex; gap: 6px; margin-top: 20px; }
 .modal-actions .left { margin-right: auto; display: flex; gap: 6px; }
 
@@ -1164,7 +1176,7 @@ input#m-importance::-moz-range-thumb {
         <div class="di-head">View Mode</div>
         <button class="di" id="vi-network"><span class="chk" id="vi-chk-network">✓</span> Network (Default)</button>
         <button class="di" id="vi-3d"><span class="chk" id="vi-chk-3d"> </span> 3D Force Graph</button>
-        <button class="di" id="vi-cluster"><span class="chk" id="vi-chk-cluster"> </span> Type Clusters</button>
+        <button class="di" id="vi-cluster"><span class="chk" id="vi-chk-cluster"> </span> Importance Rings</button>
       </div>
     </div>
 
@@ -1344,7 +1356,7 @@ input#m-importance::-moz-range-thumb {
 <div id="footer">
   <span class="footer-copy">ECO.SYSTEM.OS · For personal use only</span>
   <span>© Constantinos Tolias 2026</span>
-  <span class="footer-ver">v1.037</span>
+  <span class="footer-ver">v1.038</span>
 </div>
 
 <div id="tooltip"></div>
@@ -1356,92 +1368,104 @@ input#m-importance::-moz-range-thumb {
   <button id="modal-close">✕</button>
   <h2 id="modal-title">Add <span class="accent">Node</span></h2>
 
-  <div class="msec">
-    <div class="msec-title">Identity</div>
-    <div class="fg"><label>Name *</label><input type="text" id="m-name" placeholder="Node name…" maxlength="40"></div>
-    <div class="row2">
-      <div class="fg"><label>Type</label>
-        <div class="ac-wrap"><input type="text" class="ac-inp" id="m-type" placeholder="Select or add…" autocomplete="off"><div class="ac-sugs" id="m-type-suggestions"></div></div>
-      </div>
-      <div class="fg"><label>Status</label>
-        <div class="ac-wrap"><input type="text" class="ac-inp" id="m-status" placeholder="Select or add…" autocomplete="off"><div class="ac-sugs" id="m-status-suggestions"></div></div>
-      </div>
-    </div>
-    <div class="fg"><label>Owner / Responsible Parties</label>
-      <div class="chip-wrap" id="owner-wrap">
-        <div id="m-owner-chips"></div>
-        <input type="text" class="chip-inp" id="m-owner-input" placeholder="Add owner, Enter to add…">
-      </div>
-    </div>
-    <div class="fg"><label>Importance (0–100)</label>
-      <div class="imp-wrap">
-        <div class="imp-row">
-          <div class="imp-track-wrap"><input type="range" id="m-importance" min="0" max="100" value="50"></div>
-          <span class="imp-val" id="m-importance-val">50</span>
+  <div class="modal-cols">
+    <!-- ── LEFT COLUMN: Identity · Appearance · Tags ── -->
+    <div class="modal-col">
+
+      <div class="msec">
+        <div class="msec-title">Identity</div>
+        <div class="fg"><label>Name *</label><input type="text" id="m-name" placeholder="Node name…" maxlength="40"></div>
+        <div class="row2">
+          <div class="fg"><label>Type</label>
+            <div class="ac-wrap"><input type="text" class="ac-inp" id="m-type" placeholder="Select or add…" autocomplete="off"><div class="ac-sugs" id="m-type-suggestions"></div></div>
+          </div>
+          <div class="fg"><label>Status</label>
+            <div class="ac-wrap"><input type="text" class="ac-inp" id="m-status" placeholder="Select or add…" autocomplete="off"><div class="ac-sugs" id="m-status-suggestions"></div></div>
+          </div>
         </div>
-        <div class="imp-labs"></div>
+        <div class="fg"><label>Owner / Responsible Parties</label>
+          <div class="chip-wrap" id="owner-wrap">
+            <div id="m-owner-chips"></div>
+            <input type="text" class="chip-inp" id="m-owner-input" placeholder="Add owner, Enter to add…">
+          </div>
+        </div>
+        <div class="fg"><label>Importance (0–100)</label>
+          <div class="imp-wrap">
+            <div class="imp-row">
+              <div class="imp-track-wrap"><input type="range" id="m-importance" min="0" max="100" value="50"></div>
+              <span class="imp-val" id="m-importance-val">50</span>
+            </div>
+            <div class="imp-labs"></div>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
 
-  <div class="msec">
-    <div class="msec-title">Appearance</div>
-    <div class="fg"><label>Node Colour</label>
-      <div class="color-picker-row">
-        <input type="color" id="m-color" value="#d8d8d8" style="width:42px;height:30px;border:1px solid var(--ui-line);padding:2px;cursor:pointer;background:var(--ui-bg2);">
-        <div class="color-presets" id="color-presets"></div>
+      <div class="msec">
+        <div class="msec-title">Appearance</div>
+        <div class="fg"><label>Node Colour</label>
+          <div class="color-picker-row">
+            <input type="color" id="m-color" value="#d8d8d8" style="width:42px;height:30px;border:1px solid var(--ui-line);padding:2px;cursor:pointer;background:var(--ui-bg2);">
+            <div class="color-presets" id="color-presets"></div>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
 
-  <div class="msec">
-    <div class="msec-title">Tags</div>
-    <div class="chip-wrap" id="tag-wrap">
-      <div id="m-tag-chips"></div>
-      <input type="text" class="chip-inp" id="m-tag-input" placeholder="Type tag, Enter to add…">
-    </div>
-  </div>
+      <div class="msec">
+        <div class="msec-title">Tags</div>
+        <div class="chip-wrap" id="tag-wrap">
+          <div id="m-tag-chips"></div>
+          <input type="text" class="chip-inp" id="m-tag-input" placeholder="Type tag, Enter to add…">
+        </div>
+      </div>
 
-  <div class="msec">
-    <div class="msec-title">Relationships</div>
-    <div class="fg">
-      <label>Outgoing Links → (this node points TO)</label>
-      <select id="m-links-out" class="lnk-sel" multiple></select>
-      <small style="color:var(--ink-4);font-size:8px;margin-top:3px;display:block;">Hold Ctrl/Cmd to select multiple</small>
-    </div>
-    <div id="link-rels-wrap" style="display:none;margin-bottom:6px;">
-      <label style="font-size:7px;font-weight:700;color:var(--ink-4);text-transform:uppercase;letter-spacing:1.5px;display:block;margin-bottom:5px;">Relationship Labels</label>
-      <div id="link-rels-list"></div>
-    </div>
-    <div class="fg">
-      <label>Incoming Links ← (nodes that point TO this)</label>
-      <select id="m-links-in" class="lnk-sel" multiple></select>
-    </div>
-  </div>
+    </div><!-- /left col -->
 
-  <div class="msec">
-    <div class="msec-title">Notes</div>
-    <div class="fg">
-      <textarea id="m-notes" rows="3" placeholder="Description, context, decisions…"
-        style="font-family:var(--font);font-size:11px;font-weight:300;width:100%;padding:7px 10px;border:1px solid var(--ui-line);outline:none;background:var(--ui-bg2);color:var(--ink);resize:vertical;transition:border-color 0.12s;"
-        onfocus="this.style.borderColor='var(--ink)'" onblur="this.style.borderColor='var(--ui-line)'"></textarea>
-    </div>
-  </div>
+    <!-- ── RIGHT COLUMN: Relationships · Notes · Custom Props · Options ── -->
+    <div class="modal-col">
 
-  <div class="msec">
-    <div class="msec-title">Custom Properties</div>
-    <div id="custom-props-list"></div>
-    <button class="mbtn" id="btn-add-prop" style="margin-top:5px;font-size:7px;padding:5px 12px;">+ Property</button>
-  </div>
+      <div class="msec">
+        <div class="msec-title">Relationships</div>
+        <div class="fg">
+          <label>Outgoing Links → (this node points TO)</label>
+          <select id="m-links-out" class="lnk-sel" multiple></select>
+          <small style="color:var(--ink-4);font-size:8px;margin-top:3px;display:block;">Hold Ctrl/Cmd to select multiple</small>
+        </div>
+        <div id="link-rels-wrap" style="display:none;margin-bottom:6px;">
+          <label style="font-size:7px;font-weight:700;color:var(--ink-4);text-transform:uppercase;letter-spacing:1.5px;display:block;margin-bottom:5px;">Relationship Labels</label>
+          <div id="link-rels-list"></div>
+        </div>
+        <div class="fg">
+          <label>Incoming Links ← (nodes that point TO this)</label>
+          <select id="m-links-in" class="lnk-sel" multiple></select>
+        </div>
+      </div>
 
-  <div class="msec">
-    <div class="msec-title">Options</div>
-    <div class="pin-row">
-      <input type="checkbox" id="m-pinned">
-      <label for="m-pinned">Pin position — lock this node in place</label>
-    </div>
-    <div class="modal-meta" id="modal-meta"></div>
-  </div>
+      <div class="msec">
+        <div class="msec-title">Notes</div>
+        <div class="fg">
+          <textarea id="m-notes" rows="4" placeholder="Description, context, decisions…"
+            style="font-family:var(--font);font-size:11px;font-weight:300;width:100%;padding:7px 10px;border:1px solid var(--ui-line);outline:none;background:var(--ui-bg2);color:var(--ink);resize:vertical;transition:border-color 0.12s;"
+            onfocus="this.style.borderColor='var(--ink)'" onblur="this.style.borderColor='var(--ui-line)'"></textarea>
+        </div>
+      </div>
+
+      <div class="msec">
+        <div class="msec-title">Custom Properties</div>
+        <div id="custom-props-list"></div>
+        <button class="mbtn" id="btn-add-prop" style="margin-top:5px;font-size:7px;padding:5px 12px;">+ Property</button>
+      </div>
+
+      <div class="msec">
+        <div class="msec-title">Options</div>
+        <div class="pin-row">
+          <input type="checkbox" id="m-pinned">
+          <label for="m-pinned">Pin position — lock this node in place</label>
+        </div>
+        <div class="modal-meta" id="modal-meta"></div>
+      </div>
+
+    </div><!-- /right col -->
+  </div><!-- /modal-cols -->
 
   <div class="modal-actions">
     <div class="left">
@@ -1480,7 +1504,7 @@ input#m-importance::-moz-range-thumb {
 </div>
 <script>
 // ════════════════════════════════════════════════════════════
-//  ECO.SYSTEM.OS — Governance Network Mapper  v1.037
+//  ECO.SYSTEM.OS — Governance Network Mapper  v1.038
 // ════════════════════════════════════════════════════════════
 
 // ── Constants ─────────────────────────────────────────────
@@ -2462,7 +2486,7 @@ function undoDelete() {
 
 // ── 3D GRAPH ───────────────────────────────────────────────
 function enable3D() {
-  if(isCluster){ disableCluster(); isCluster=false; document.getElementById('vi-chk-cluster').textContent=' '; }
+  if(isCluster){ disableRings(); isCluster=false; document.getElementById('vi-chk-cluster').textContent=' '; }
   document.getElementById('graph').style.display='none';
   const c=document.getElementById('graph-3d');c.style.display='block';
   document.getElementById('mode-indicator').textContent='3D MODE';
@@ -2923,7 +2947,7 @@ document.getElementById('btn-links-toggle').addEventListener('click', function()
 document.getElementById('vi-network').addEventListener('click',function(){
   // Disable 3D and cluster if active
   if(is3D){ disable3D(); is3D=false; document.getElementById('vi-chk-3d').textContent=' '; }
-  if(isCluster){ disableCluster(); isCluster=false; document.getElementById('vi-chk-cluster').textContent=' '; }
+  if(isCluster){ disableRings(); isCluster=false; document.getElementById('vi-chk-cluster').textContent=' '; }
   document.getElementById('vi-chk-network').textContent='✓';
   simulation.alpha(0.3).restart();
   visualsPanel.classList.remove('show');
@@ -2931,7 +2955,7 @@ document.getElementById('vi-network').addEventListener('click',function(){
 });
 
 document.getElementById('vi-3d').addEventListener('click',function(){
-  if(isCluster){ disableCluster(); isCluster=false; document.getElementById('vi-chk-cluster').textContent=' '; }
+  if(isCluster){ disableRings(); isCluster=false; document.getElementById('vi-chk-cluster').textContent=' '; }
   is3D=!is3D;
   document.getElementById('vi-chk-3d').textContent=is3D?'✓':' ';
   document.getElementById('vi-chk-network').textContent=is3D?' ':'✓';
@@ -2941,110 +2965,124 @@ document.getElementById('vi-3d').addEventListener('click',function(){
   notify(is3D?'3D force graph activated':'Back to 2D');
 });
 
-// ── CLUSTER VIEW ───────────────────────────────────────────
-// Groups nodes by Type using custom D3 cluster forces.
-// Each type gets a centroid; nodes are attracted toward their type's centroid.
+// ── IMPORTANCE RINGS VIEW ──────────────────────────────────
+// Arranges nodes in 4 concentric rings based on importance tier.
+// Ring 1 (outermost): 0–24   → Low
+// Ring 2:            25–49   → Medium
+// Ring 3:            50–74   → High
+// Ring 4 (innermost): 75–100 → Critical
+// Each node is attracted toward its ring radius via a custom radial force.
 
-const TYPE_ORDER_LIST = ['Policy','Standard','Regulation','Process','Role','System','Risk','Control','Asset','Objective'];
+const RING_DEFS = [
+  { min: 75, max: 100, label: 'Critical',  r: 80  },
+  { min: 50, max: 74,  label: 'High',      r: 190 },
+  { min: 25, max: 49,  label: 'Medium',    r: 310 },
+  { min: 0,  max: 24,  label: 'Low',       r: 440 },
+];
 
-function getClusterCentroids() {
-  const W = svg2D.node().clientWidth, H = svg2D.node().clientHeight;
-  const types = [...new Set(nodes.map(n=>n.type||'(none)'))];
-  const count = types.length || 1;
-  const R = Math.min(W,H) * 0.28;
-  const cx = 0, cy = 0;
-  const centroids = {};
-  types.forEach((t,i)=>{
-    const angle = (i/count)*Math.PI*2 - Math.PI/2;
-    centroids[t] = { x: cx + R*Math.cos(angle), y: cy + R*Math.sin(angle) };
-  });
-  return centroids;
+function getRing(imp) {
+  const v = imp ?? 50;
+  return RING_DEFS.find(rd => v >= rd.min && v <= rd.max) || RING_DEFS[2];
 }
 
-let clusterForceActive = false;
-function clusterForce(alpha) {
-  if(!clusterForceActive) return;
-  const centroids = getClusterCentroids();
-  const strength = 0.18;
-  nodes.forEach(node=>{
-    const t = node.type||'(none)';
-    const c = centroids[t];
-    if(!c) return;
-    node.vx += (c.x - node.x) * alpha * strength;
-    node.vy += (c.y - node.y) * alpha * strength;
+let ringForceActive = false;
+
+function ringForce(alpha) {
+  if (!ringForceActive) return;
+  const strength = 0.22;
+  nodes.forEach(node => {
+    const ring = getRing(node.importance);
+    const dx = node.x || 0, dy = node.y || 0;
+    const dist = Math.sqrt(dx*dx + dy*dy) || 1;
+    // Pull/push node toward the ring radius
+    const delta = (dist - ring.r) / dist;
+    node.vx -= dx * delta * alpha * strength;
+    node.vy -= dy * delta * alpha * strength;
+    // Light angular spread — prevent nodes stacking at same angle
+    const angle = Math.atan2(dy, dx);
+    node.vx += Math.cos(angle + 0.08) * alpha * 0.015;
+    node.vy += Math.sin(angle + 0.08) * alpha * 0.015;
   });
 }
 
-function enableCluster() {
-  if(is3D){ disable3D(); is3D=false; document.getElementById('vi-chk-3d').textContent=' '; }
-  clusterForceActive = true;
-  document.getElementById('mode-indicator').textContent = 'CLUSTER MODE';
+function enableRings() {
+  if (is3D) { disable3D(); is3D = false; document.getElementById('vi-chk-3d').textContent = ' '; }
+  ringForceActive = true;
+  document.getElementById('mode-indicator').textContent = 'IMPORTANCE RINGS';
   document.getElementById('mode-indicator').style.display = 'block';
-  // Weaken charge & link distance so cluster force dominates
   simulation
-    .force('charge', d3.forceManyBody().strength(d => -60 - d.importance*0.8))
-    .force('link', d3.forceLink().id(d=>d.id).distance(30).strength(0.15))
-    .force('cluster', clusterForce)
-    .alpha(0.9).restart();
-  // Draw type centroid labels
-  drawClusterLabels();
+    .force('charge', d3.forceManyBody().strength(d => -40 - (d.importance||50) * 0.4))
+    .force('link',   d3.forceLink().id(d => d.id).distance(28).strength(0.08))
+    .force('rings',  ringForce)
+    .force('collision', d3.forceCollide().radius(d => nodeRadius(d.importance||50) + 10).strength(0.9))
+    .alpha(1).alphaDecay(0.012).restart();
+  drawRingDecorations();
 }
 
-function disableCluster() {
-  clusterForceActive = false;
+function disableRings() {
+  ringForceActive = false;
   document.getElementById('mode-indicator').style.display = 'none';
-  svg2D.select('#cluster-labels-layer').remove();
-  // Restore original forces
+  svg2D.select('#ring-decorations-layer').remove();
+  // Restore standard forces
   simulation
-    .force('charge', d3.forceManyBody().strength(d => -150 - d.importance * 1.5))
-    .force('link', d3.forceLink().id(d=>d.id).distance(d=>{
-      const s=nodes.find(n=>n.id===(typeof d.source==='object'?d.source.id:d.source));
-      const t=nodes.find(n=>n.id===(typeof d.target==='object'?d.target.id:d.target));
-      const mi=s&&t?Math.min(s.importance,t.importance):50;
-      return 60+mi*0.8;
+    .force('charge', d3.forceManyBody().strength(d => -150 - (d.importance||50) * 1.5))
+    .force('link', d3.forceLink().id(d => d.id).distance(d => {
+      const s = nodes.find(n => n.id === (typeof d.source === 'object' ? d.source.id : d.source));
+      const t = nodes.find(n => n.id === (typeof d.target === 'object' ? d.target.id : d.target));
+      const mi = s && t ? Math.min(s.importance||50, t.importance||50) : 50;
+      return 60 + mi * 0.8;
     }).strength(0.4))
-    .force('cluster', null)
-    .alpha(0.6).restart();
+    .force('rings', null)
+    .force('collision', d3.forceCollide().radius(d => nodeRadius(d.importance||50) + 16).strength(0.85))
+    .alpha(0.6).alphaDecay(0.028).restart();
 }
 
-function drawClusterLabels() {
-  svg2D.select('#cluster-labels-layer').remove();
-  const labelLayer = g.insert('g','#links-layer').attr('id','cluster-labels-layer');
-  const centroids = getClusterCentroids();
-  Object.entries(centroids).forEach(([type, pos])=>{
-    const color = TYPE_COLORS[type] || '#a0a0a0';
-    const typeNodes = nodes.filter(n=>(n.type||'(none)')===type);
-    if(!typeNodes.length) return;
-    const grp = labelLayer.append('g').attr('transform',`translate(${pos.x},${pos.y})`);
-    // Background pill
-    grp.append('ellipse')
-      .attr('rx', 38).attr('ry', 13)
-      .attr('fill', color).attr('opacity', 0.08)
-      .attr('stroke', color).attr('stroke-width', 0.5).attr('stroke-opacity', 0.25);
-    grp.append('text')
-      .attr('text-anchor','middle').attr('dominant-baseline','middle')
-      .attr('font-family',"'Sunflower','Helvetica Neue',sans-serif")
-      .attr('font-size', 9).attr('font-weight', 500)
-      .attr('fill', color).attr('opacity', 0.6)
-      .text(type + ' (' + typeNodes.length + ')');
+function drawRingDecorations() {
+  svg2D.select('#ring-decorations-layer').remove();
+  // Insert behind links layer
+  const layer = g.insert('g', '#links-layer').attr('id', 'ring-decorations-layer');
+  RING_DEFS.forEach(rd => {
+    const typeNodes = nodes.filter(n => {
+      const v = n.importance ?? 50;
+      return v >= rd.min && v <= rd.max;
+    });
+    if (!typeNodes.length) return;
+    // Faint circle guide
+    layer.append('circle')
+      .attr('r', rd.r)
+      .attr('fill', 'none')
+      .attr('stroke', 'rgba(255,255,255,0.055)')
+      .attr('stroke-width', 1)
+      .attr('stroke-dasharray', '4 6');
+    // Label at top of circle
+    const labelY = -rd.r - 8;
+    layer.append('text')
+      .attr('x', 0).attr('y', labelY)
+      .attr('text-anchor', 'middle')
+      .attr('font-family', "'Sunflower','Helvetica Neue',sans-serif")
+      .attr('font-size', 7).attr('font-weight', 700)
+      .attr('letter-spacing', 2)
+      .attr('fill', 'rgba(255,255,255,0.22)')
+      .attr('text-transform', 'uppercase')
+      .text(rd.label.toUpperCase() + '  ' + rd.min + '–' + rd.max);
   });
 }
 
-document.getElementById('vi-cluster').addEventListener('click',function(){
-  isCluster=!isCluster;
-  document.getElementById('vi-chk-cluster').textContent=isCluster?'✓':' ';
-  document.getElementById('vi-chk-network').textContent=isCluster?' ':'✓';
-  if(isCluster)enableCluster();
-  else disableCluster();
+document.getElementById('vi-cluster').addEventListener('click', function() {
+  isCluster = !isCluster;
+  document.getElementById('vi-chk-cluster').textContent = isCluster ? '✓' : ' ';
+  document.getElementById('vi-chk-network').textContent = isCluster ? ' ' : '✓';
+  if (isCluster) enableRings();
+  else disableRings();
   visualsPanel.classList.remove('show');
-  notify(isCluster?'Type Clusters view activated':'Back to free layout');
+  notify(isCluster ? 'Importance Rings activated' : 'Back to free layout');
 });
 
 // ── SAVE DROPDOWN ──────────────────────────────────────────
 document.getElementById('btn-save-menu').onclick=e=>{e.stopPropagation();document.getElementById('save-panel').classList.toggle('show');};
 
 function graphToJSON(){
-  return JSON.stringify({version:'1.037',nodes:nodes.map(n=>({...n,vx:0,vy:0,fx:null,fy:null,_dragging:undefined})),links:[],customTypes,customStatuses},null,2);
+  return JSON.stringify({version:'1.038',nodes:nodes.map(n=>({...n,vx:0,vy:0,fx:null,fy:null,_dragging:undefined})),links:[],customTypes,customStatuses},null,2);
 }
 function loadFromJSON(json) {
   const data=typeof json==='string'?JSON.parse(json):json;
