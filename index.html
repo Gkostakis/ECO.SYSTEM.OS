@@ -2476,6 +2476,19 @@ function undoDelete() {
 }
 
 // ── 3D GRAPH ───────────────────────────────────────────────
+// ── SHARED: scatter nodes to neutral before any view switch ──
+function resetNodePositions() {
+  nodes.forEach(n => {
+    if (n.fx != null) return; // leave pinned nodes alone
+    const angle = Math.random() * Math.PI * 2;
+    const r = Math.random() * 120;
+    n.x  = Math.cos(angle) * r;
+    n.y  = Math.sin(angle) * r;
+    n.vx = (Math.random() - 0.5) * 6;
+    n.vy = (Math.random() - 0.5) * 6;
+  });
+}
+
 function enable3D() {
   if(isCluster){ disableRings(); isCluster=false; document.getElementById('vi-chk-cluster').textContent=' '; }
   document.getElementById('graph').style.display='none';
@@ -2507,7 +2520,7 @@ function enable3D() {
       .linkDirectionalArrowLength(4)
       .linkDirectionalArrowColor(()=>'rgba(40,40,40,0.9)')
       .linkDirectionalArrowRelPos(1)
-      .linkDirectionalParticles(2)
+      .linkDirectionalParticles(linksAnimating ? 2 : 0)
       .linkDirectionalParticleColor(l=>{
         const sid=typeof l.source==='object'?l.source.id:l.source;
         const sn=nodes.find(n=>n.id===sid);
@@ -2530,7 +2543,8 @@ function disable3D() {
   const c=document.getElementById('graph-3d');c.style.display='none';
   document.getElementById('mode-indicator').style.display='none';
   if(graph3D){try{c.innerHTML='';}catch(e){}graph3D=null;}
-  if(simulation)simulation.alpha(0.3).restart();
+  resetNodePositions();
+  if(simulation)simulation.alpha(1).alphaDecay(0.028).restart();
 }
 
 function refresh3D() {
@@ -2930,8 +2944,14 @@ document.getElementById('btn-links-toggle').addEventListener('click', function()
   this.querySelector('svg').innerHTML = linksAnimating
     ? '<path d="M2 2h2.5v8H2zM7.5 2H10v8H7.5z" fill="currentColor" opacity="0.7"/>'
     : '<path d="M2 2l9 4.5L2 11V2z" fill="currentColor" opacity="0.8"/>';
-  // Keep simulation ticking so positions update; particles just freeze
-  if (!linksAnimating) simulation.alpha(0.01).restart();
+  // 2D: keep simulation ticking so positions update; particles just freeze
+  if (!is3D) {
+    if (!linksAnimating) simulation.alpha(0.01).restart();
+  }
+  // 3D: directly toggle directional particles on the live graph
+  if (is3D && graph3D) {
+    graph3D.linkDirectionalParticles(linksAnimating ? 2 : 0);
+  }
   notify(linksAnimating ? 'Link animation resumed' : 'Link animation paused');
 });
 
@@ -2948,11 +2968,30 @@ document.getElementById('vi-3d').addEventListener('click',function(){
 
 // ── NETWORK VIEW (Default) ─────────────────────────────────
 document.getElementById('vi-network').addEventListener('click', function() {
-  if (is3D)      { disable3D();    is3D=false;    document.getElementById('vi-chk-3d').textContent=' '; }
-  if (isCluster) { disableRings(); isCluster=false; document.getElementById('vi-chk-cluster').textContent=' '; }
+  if (is3D)      { is3D=false; document.getElementById('vi-chk-3d').textContent=' ';
+                   document.getElementById('graph').style.display='';
+                   const c=document.getElementById('graph-3d'); c.style.display='none';
+                   document.getElementById('mode-indicator').style.display='none';
+                   if(graph3D){try{c.innerHTML='';}catch(e){}graph3D=null;}
+                   if(simulation)simulation.stop(); }
+  if (isCluster) { isCluster=false; document.getElementById('vi-chk-cluster').textContent=' ';
+                   ringForceActive=false;
+                   svg2D.select('#ring-deco-layer').remove();
+                   document.getElementById('mode-indicator').style.display='none'; }
   document.getElementById('vi-chk-network').textContent = '✓';
-  // disableRings() already fires a full alpha(1) restart; only need this for 3D exit
-  if (!isCluster) simulation.alpha(1).alphaDecay(0.028).restart();
+  // Reset all node positions to a neutral cluster — Network builds its own layout from scratch
+  resetNodePositions();
+  simulation
+    .force('charge',    d3.forceManyBody().strength(d => -150 - d.importance * 1.5))
+    .force('link',      d3.forceLink().id(d => d.id).distance(d => {
+      const s = nodes.find(n => n.id === (typeof d.source==='object'?d.source.id:d.source));
+      const t = nodes.find(n => n.id === (typeof d.target==='object'?d.target.id:d.target));
+      const mi = s && t ? Math.min(s.importance, t.importance) : 50;
+      return 60 + mi * 0.8;
+    }).strength(0.4))
+    .force('rings',     null)
+    .force('collision', d3.forceCollide().radius(d => nodeRadius(d.importance) + 16).strength(0.85))
+    .alpha(1).alphaDecay(0.028).restart();
   visualsPanel.classList.remove('show');
   notify('Network view activated');
 });
@@ -2998,6 +3037,8 @@ function enableRings() {
   ringForceActive = true;
   document.getElementById('mode-indicator').textContent = 'IMPORTANCE RINGS';
   document.getElementById('mode-indicator').style.display = 'block';
+  // Start from a neutral cluster so rings build their layout from scratch
+  resetNodePositions();
   simulation
     .force('charge',    d3.forceManyBody().strength(d => -35 - (d.importance || 50) * 0.35))
     .force('link',      d3.forceLink().id(d => d.id).distance(24).strength(0.06))
@@ -3011,29 +3052,6 @@ function disableRings() {
   ringForceActive = false;
   document.getElementById('mode-indicator').style.display = 'none';
   svg2D.select('#ring-deco-layer').remove();
-  // Scatter nodes back toward center so free-layout forces can reorganize
-  // without being anchored to their ring geometry
-  nodes.forEach(n => {
-    if (n.fx != null) return; // leave pinned nodes alone
-    const dist = Math.sqrt((n.x||0)*(n.x||0) + (n.y||0)*(n.y||0)) || 1;
-    const pull = 0.25; // how far to collapse toward origin (0 = origin, 1 = stay)
-    n.x = (n.x || 0) * pull + (Math.random() - 0.5) * 80;
-    n.y = (n.y || 0) * pull + (Math.random() - 0.5) * 80;
-    n.vx = (Math.random() - 0.5) * 12;
-    n.vy = (Math.random() - 0.5) * 12;
-  });
-  // Restore original forces with a full-strength alpha
-  simulation
-    .force('charge',    d3.forceManyBody().strength(d => -150 - d.importance * 1.5))
-    .force('link',      d3.forceLink().id(d => d.id).distance(d => {
-      const s = nodes.find(n => n.id === (typeof d.source==='object'?d.source.id:d.source));
-      const t = nodes.find(n => n.id === (typeof d.target==='object'?d.target.id:d.target));
-      const mi = s && t ? Math.min(s.importance, t.importance) : 50;
-      return 60 + mi * 0.8;
-    }).strength(0.4))
-    .force('rings',     null)
-    .force('collision', d3.forceCollide().radius(d => nodeRadius(d.importance) + 16).strength(0.85))
-    .alpha(1).alphaDecay(0.028).restart();
 }
 
 function drawRingDecorations() {
@@ -3068,10 +3086,26 @@ document.getElementById('vi-cluster').addEventListener('click', function() {
   isCluster = !isCluster;
   document.getElementById('vi-chk-cluster').textContent = isCluster ? '✓' : ' ';
   document.getElementById('vi-chk-network').textContent = isCluster ? ' ' : '✓';
-  if (isCluster) enableRings();
-  else disableRings();
+  if (isCluster) {
+    enableRings();
+  } else {
+    // Turning rings off → go back to Network with a clean reset
+    disableRings();
+    resetNodePositions();
+    simulation
+      .force('charge',    d3.forceManyBody().strength(d => -150 - d.importance * 1.5))
+      .force('link',      d3.forceLink().id(d => d.id).distance(d => {
+        const s = nodes.find(n => n.id === (typeof d.source==='object'?d.source.id:d.source));
+        const t = nodes.find(n => n.id === (typeof d.target==='object'?d.target.id:d.target));
+        const mi = s && t ? Math.min(s.importance, t.importance) : 50;
+        return 60 + mi * 0.8;
+      }).strength(0.4))
+      .force('rings',     null)
+      .force('collision', d3.forceCollide().radius(d => nodeRadius(d.importance) + 16).strength(0.85))
+      .alpha(1).alphaDecay(0.028).restart();
+  }
   visualsPanel.classList.remove('show');
-  notify(isCluster ? 'Importance Rings activated' : 'Back to free layout');
+  notify(isCluster ? 'Importance Rings activated' : 'Back to Network layout');
 });
 
 // ── SAVE DROPDOWN ──────────────────────────────────────────
