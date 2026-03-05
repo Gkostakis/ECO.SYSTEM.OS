@@ -60,6 +60,10 @@ html, body {
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
 }
+/* dvh: shrinks when the mobile address bar appears, so body never exceeds visible viewport */
+@supports (height: 100dvh) {
+  html, body { height: 100dvh; }
+}
 
 /* ══ SCROLLBAR ════════════════════════════════════════════ */
 ::-webkit-scrollbar { width: 3px; height: 3px; }
@@ -369,6 +373,7 @@ body { display: flex; flex-direction: column; }
 /* ══ CANVAS WRAP ══════════════════════════════════════════ */
 #canvas-wrap {
   flex: 1;
+  min-height: 0;   /* critical: prevents flex child overflow */
   overflow: hidden;
   position: relative;
   background: var(--canvas-bg);
@@ -376,6 +381,8 @@ body { display: flex; flex-direction: column; }
 
 /* 2D SVG */
 svg#graph {
+  position: absolute;
+  top: 0; left: 0;
   width: 100%; height: 100%;
   background: var(--canvas-bg);
   cursor: crosshair;
@@ -1174,12 +1181,9 @@ input#m-importance::-moz-range-thumb {
 /* ── TOUCH / SAFARI ENHANCEMENTS ───────────────────────── */
 html {
   -webkit-text-size-adjust: 100%;
-  height: -webkit-fill-available;
 }
 body {
   -webkit-tap-highlight-color: transparent;
-  min-height: 100vh;
-  min-height: -webkit-fill-available;
 }
 button, .tbtn, .di, .fchip, .mbtn, .ptab, .prop-edit-btn {
   touch-action: manipulation;
@@ -1288,6 +1292,10 @@ button, .tbtn, .di, .fchip, .mbtn, .ptab, .prop-edit-btn {
     border-top: 1px solid var(--ui-line-hi);
     transform: translateY(110%);
     transition: opacity 0.2s ease, transform 0.22s cubic-bezier(0.25,0.46,0.45,0.94);
+  }
+  @supports (height: 100dvh) {
+    #side-panel { height: 55dvh; max-height: 55dvh; }
+    #canvas-wrap.panel-open #btn-panel-fab { bottom: calc(55dvh + 14px); }
   }
   #side-panel.visible { transform: translateY(0); opacity: 1; }
 
