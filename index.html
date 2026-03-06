@@ -11,10 +11,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 <script src="https://unpkg.com/3d-force-graph@1.73.4/dist/3d-force-graph.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 /* ══════════════════════════════════════════════════════════
-   ECO.SYSTEM.OS  ·  Governance Mapper  ·  v1.043
+   ECO.SYSTEM.OS  ·  Governance Mapper  ·  v1.041
    UI: Editorial Swiss — inspired by Pacifica / Harry Atkins
    Palette: Pure white UI · Black canvas · Grayscale midtones
    ══════════════════════════════════════════════════════════ */
@@ -409,7 +408,7 @@ svg#graph:active { cursor: grabbing; }
 .node-label {
   font-family: 'Sunflower', sans-serif;
   font-weight: 500;
-  fill: #ffffff;
+  fill: #ffffff; /* default — overridden per-render by nodeLabelColor via setAttribute */
   pointer-events: none;
   text-anchor: middle;
   dominant-baseline: auto;
@@ -1446,7 +1445,7 @@ button, .tbtn, .di, .fchip, .mbtn, .ptab, .prop-edit-btn {
         <div class="di-head">Color</div>
         <button class="di" id="vi-color-type"><span class="chk" id="vi-chk-ctype"> </span> Color by Type</button>
         <div class="di" style="cursor:default;user-select:none;">
-          <span style="font-size:9px;color:var(--ink-3);flex:1;">Background</span>
+          <span style="font-size:9px;color:var(--ink-3);flex:1;">Canvas background</span>
           <div style="position:relative;width:24px;height:14px;">
             <input type="color" id="bg-color-input" value="#080808"
               style="position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;border:none;padding:0;">
@@ -1458,7 +1457,7 @@ button, .tbtn, .di, .fchip, .mbtn, .ptab, .prop-edit-btn {
           <div style="position:relative;width:24px;height:14px;">
             <input type="color" id="label-color-input" value="#ffffff"
               style="position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;border:none;padding:0;">
-            <div id="label-color-swatch" class="di-color-swatch" style="background:#ffffff;border:1px solid rgba(255,255,255,0.15);"></div>
+            <div id="label-color-swatch" class="di-color-swatch" style="background:#ffffff;border:1px solid rgba(255,255,255,0.2);"></div>
           </div>
         </div>
         <div class="di-sep"></div>
@@ -1490,17 +1489,17 @@ button, .tbtn, .di, .fchip, .mbtn, .ptab, .prop-edit-btn {
   <!-- Import / Save -->
   <div class="tb-group">
     <button class="tbtn" id="btn-import-json">Import</button>
-    <button class="tbtn" id="btn-import-url">Import URL</button>
     <div class="drop-wrap" id="save-wrap">
       <button class="tbtn" id="btn-save-menu">Save ▾</button>
       <div class="dropdown right-align" id="save-panel">
         <button class="di" id="save-json">Save as JSON</button>
-        <button class="di" id="save-xlsx">Save as Excel</button>
         <button class="di" id="save-svg">Save as SVG</button>
-        <button class="di" id="save-png">Save as PNG</button>
+        <div class="di-sep"></div>
+        <button class="di" id="save-ls">Save to Browser</button>
+        <button class="di" id="load-ls">Load from Browser</button>
       </div>
     </div>
-    <input type="file" id="file-input" accept=".json,.xlsx,.xls" style="display:none">
+    <input type="file" id="file-input" accept=".json" style="display:none">
   </div>
 
   <!-- Spacer -->
@@ -1535,7 +1534,6 @@ button, .tbtn, .di, .fchip, .mbtn, .ptab, .prop-edit-btn {
   </div>
   <div class="md-row">
     <button class="tbtn" onclick="closeMobileMenu();document.getElementById('btn-import-json').click();">Import</button>
-    <button class="tbtn" onclick="closeMobileMenu();document.getElementById('btn-import-url').click();">Import URL</button>
     <button class="tbtn" onclick="closeMobileMenu();document.getElementById('btn-save-menu').click();">Save ▾</button>
     <div id="md-search-wrap">
       <input type="text" id="md-search" placeholder="Search nodes…"
@@ -1683,22 +1681,7 @@ button, .tbtn, .di, .fchip, .mbtn, .ptab, .prop-edit-btn {
 <div id="footer">
   <span class="footer-copy">ECO.SYSTEM.OS · For personal use only</span>
   <span>© Constantinos Tolias 2026</span>
-  <span class="footer-ver">v1.043</span>
-</div>
-
-<!-- ══════════ URL IMPORT OVERLAY ══════════════════════════ -->
-<div id="url-import-overlay" style="display:none;position:fixed;inset:0;z-index:850;align-items:flex-start;justify-content:center;padding-top:90px;background:rgba(0,0,0,0.55);backdrop-filter:blur(3px);">
-  <div style="background:var(--ui-bg);border:1px solid var(--ui-line-hi);width:480px;max-width:calc(100vw - 32px);padding:20px 20px 16px;display:flex;flex-direction:column;gap:10px;box-shadow:0 16px 48px rgba(0,0,0,0.5);">
-    <div style="font-size:8px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--ink-3);">Import from URL — JSON or Excel (.xlsx)</div>
-    <input type="text" id="url-import-input" placeholder="https://example.com/graph.json  or  graph.xlsx"
-      spellcheck="false" autocomplete="off"
-      style="font-family:var(--font);font-size:11px;font-weight:300;padding:8px 10px;border:1px solid var(--ui-line-hi);background:var(--ui-bg2);color:var(--ink);outline:none;width:100%;">
-    <div id="url-import-status" style="font-size:9px;font-weight:300;color:var(--ink-3);min-height:14px;letter-spacing:0.3px;"></div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;">
-      <button id="btn-url-cancel" style="font-family:var(--font);font-size:8px;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;padding:8px 16px;border:1px solid var(--ui-line-hi);background:transparent;color:var(--ink-2);cursor:pointer;">Cancel</button>
-      <button id="btn-url-load"   style="font-family:var(--font);font-size:8px;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;padding:8px 16px;border:1px solid var(--ink);background:var(--ink);color:#111;cursor:pointer;">Load</button>
-    </div>
-  </div>
+  <span class="footer-ver">v1.041</span>
 </div>
 
 <div id="tooltip"></div>
@@ -1853,7 +1836,7 @@ button, .tbtn, .di, .fchip, .mbtn, .ptab, .prop-edit-btn {
 </div>
 <script>
 // ════════════════════════════════════════════════════════════
-//  ECO.SYSTEM.OS — Governance Network Mapper  v1.043
+//  ECO.SYSTEM.OS — Governance Network Mapper  v1.041
 // ════════════════════════════════════════════════════════════
 
 // ── Constants ─────────────────────────────────────────────
@@ -1897,7 +1880,7 @@ let activeOverlayTab = 'properties';
 let zoomTransform = d3.zoomIdentity;
 let zoomBehavior;
 let colorByType = false;
-let nodeLabelColor = '#ffffff'; // controlled by Title picker in Visuals
+let nodeLabelColor = '#ffffff'; // global — set by Title colour picker in Visuals
 let showLinkLabels = false;
 let filterTypes = new Set();
 let filterStatus = '';
@@ -3332,6 +3315,18 @@ setCanvasBg('#050505');
 bgColorInput.addEventListener('input',e=>setCanvasBg(e.target.value));
 bgColorInput.addEventListener('change',e=>setCanvasBg(e.target.value));
 
+// ── TITLE COLOUR ───────────────────────────────────────────
+const labelColorInput=document.getElementById('label-color-input');
+const labelColorSwatch=document.getElementById('label-color-swatch');
+function setLabelColor(color){
+  nodeLabelColor=color;
+  labelColorSwatch.style.background=color;
+  labelColorInput.value=color;
+  updateNodeLabels(nodeLayer.selectAll('.node-group'));
+}
+labelColorInput.addEventListener('input',e=>setLabelColor(e.target.value));
+labelColorInput.addEventListener('change',e=>setLabelColor(e.target.value));
+
 // Links button: toggle particle animation on/off
 document.getElementById('btn-links-toggle').addEventListener('click', function() {
   linksAnimating = !linksAnimating;
@@ -3615,7 +3610,7 @@ document.getElementById('vi-cluster').addEventListener('click', function() {
 document.getElementById('btn-save-menu').onclick=e=>{e.stopPropagation();document.getElementById('save-panel').classList.toggle('show');};
 
 function graphToJSON(){
-  return JSON.stringify({version:'1.043',nodes:nodes.map(n=>({...n,vx:0,vy:0,fx:null,fy:null,_dragging:undefined})),links:[],customTypes,customStatuses},null,2);
+  return JSON.stringify({version:'1.041',nodes:nodes.map(n=>({...n,vx:0,vy:0,fx:null,fy:null,_dragging:undefined})),links:[],customTypes,customStatuses},null,2);
 }
 function loadFromJSON(json) {
   const data=typeof json==='string'?JSON.parse(json):json;
@@ -3641,173 +3636,28 @@ document.getElementById('save-svg').onclick=e=>{
   const blob=new Blob([svgStr],{type:'image/svg+xml'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='ecosystemos-governance.svg';a.click();notify('SVG saved');
 };
-// ── TITLE COLOUR ───────────────────────────────────────────
-const labelColorInput = document.getElementById('label-color-input');
-const labelColorSwatch = document.getElementById('label-color-swatch');
-function setLabelColor(color) {
-  nodeLabelColor = color;
-  labelColorSwatch.style.background = color;
-  labelColorInput.value = color;
-  updateNodeLabels(nodeLayer.selectAll('.node-group'));
-}
-labelColorInput.addEventListener('input', e => setLabelColor(e.target.value));
-labelColorInput.addEventListener('change', e => setLabelColor(e.target.value));
-
-// ── EXCEL EXPORT ────────────────────────────────────────────
-// Sheet 1 "Nodes": one row per node, all fields human-editable.
-// Columns: ID | Name | Type | Status | Importance | Color |
-//          Notes | Tags (;) | Owners (;) | Links Out (;) | Custom (key=val;)
-// Sheet 2 "Links": flat source→target pairs for readability.
-document.getElementById('save-xlsx').onclick = e => {
-  e.stopPropagation(); document.getElementById('save-panel').classList.remove('show');
-  const COLS = ['ID','Name','Type','Status','Importance','Color','Notes','Tags (;)','Owners (;)','Links Out (;)','Custom (key=val;)'];
-  const rows = nodes.map(n => [
-    n.id, n.name||'', n.type||'', n.status||'', n.importance??50, n.color||'', n.notes||'',
-    (n.tags||[]).join(';'), (n.owners||[]).join(';'), (n.linksOut||[]).join(';'),
-    (n.custom||[]).map(kv => kv.key+'='+kv.val).join(';'),
-  ]);
-  const ws = XLSX.utils.aoa_to_sheet([COLS, ...rows]);
-  ws['!cols'] = [{wch:12},{wch:24},{wch:14},{wch:14},{wch:11},{wch:9},{wch:34},{wch:22},{wch:18},{wch:28},{wch:34}];
-  ws['!freeze'] = {xSplit:0,ySplit:1,topLeftCell:'A2',activePane:'bottomLeft',state:'frozen'};
-  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Nodes');
-  const linkRows = [['Source ID','Source Name','Target ID','Target Name']];
-  nodes.forEach(n => (n.linksOut||[]).forEach(tid => {
-    const t = nodes.find(x => x.id===tid);
-    linkRows.push([n.id, n.name||'', tid, t ? t.name||'' : '(unknown)']);
-  }));
-  const ws2 = XLSX.utils.aoa_to_sheet(linkRows);
-  ws2['!cols'] = [{wch:14},{wch:24},{wch:14},{wch:24}];
-  XLSX.utils.book_append_sheet(wb, ws2, 'Links');
-  XLSX.writeFile(wb, 'ecosystemos-governance.xlsx');
-  notify('Excel saved');
+document.getElementById('save-ls').onclick=e=>{e.stopPropagation();document.getElementById('save-panel').classList.remove('show');autoSave();notify('Saved to browser');};
+document.getElementById('load-ls').onclick=e=>{
+  e.stopPropagation();document.getElementById('save-panel').classList.remove('show');
+  const raw=localStorage.getItem(STORAGE_KEY);
+  if(!raw){notify('⚠  Nothing saved yet');return;}
+  loadFromJSON(raw);notify('Loaded from browser');
 };
 
-// ── EXCEL IMPORT PARSER ─────────────────────────────────────
-function importXLSX(arrayBuffer, filename) {
-  const wb = XLSX.read(arrayBuffer, {type:'array'});
-  const ws = wb.Sheets[wb.SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json(ws, {defval:''});
-  if (!rows.length) { notify('⚠ Spreadsheet is empty'); return; }
-  const importedNodes = rows.map(r => ({
-    id:         String(r['ID']||'').trim() || ('n'+Math.random().toString(36).substr(2,8)),
-    name:       String(r['Name']||'Unnamed'),
-    type:       String(r['Type']||''),
-    status:     String(r['Status']||''),
-    importance: Number(r['Importance']) || 50,
-    color:      String(r['Color']||'#d8d8d8'),
-    notes:      String(r['Notes']||''),
-    tags:       String(r['Tags (;)']||'').split(';').map(s=>s.trim()).filter(Boolean),
-    owners:     String(r['Owners (;)']||'').split(';').map(s=>s.trim()).filter(Boolean),
-    linksOut:   String(r['Links Out (;)']||'').split(';').map(s=>s.trim()).filter(Boolean),
-    custom:     String(r['Custom (key=val;)']||'').split(';').map(s=>s.trim()).filter(Boolean)
-                  .map(kv => { const i=kv.indexOf('='); return i>0 ? {key:kv.slice(0,i),val:kv.slice(i+1)} : {key:kv,val:''}; }),
-    linksIn:[], linkMeta:{}, pinned:false,
-    x:(Math.random()-0.5)*400, y:(Math.random()-0.5)*400,
-    vx:0, vy:0, fx:null, fy:null, updatedAt: new Date().toISOString(),
-  }));
-  loadFromJSON({nodes: importedNodes});
-  notify('↑ Imported ' + filename);
-}
-
-// ── PNG EXPORT ──────────────────────────────────────────────
-document.getElementById('save-png').onclick = e => {
-  e.stopPropagation(); document.getElementById('save-panel').classList.remove('show');
-  if (is3D) { notify('⚠ Switch to 2D to export PNG'); return; }
-  const svgEl = document.getElementById('graph');
-  const ser = new XMLSerializer();
-  let svgStr = ser.serializeToString(svgEl);
-  const bg = getComputedStyle(document.documentElement).getPropertyValue('--canvas-bg').trim() || '#050505';
-  svgStr = svgStr.replace('<svg', `<svg style="background:${bg}"`);
-  const svgBlob = new Blob([svgStr], {type:'image/svg+xml;charset=utf-8'});
-  const url = URL.createObjectURL(svgBlob);
-  const img = new Image();
-  const w = svgEl.clientWidth || 1920;
-  const h = svgEl.clientHeight || 1080;
-  img.onload = () => {
-    const canvas = document.createElement('canvas');
-    const scale = 2; // 2× for retina-quality output
-    canvas.width = w * scale; canvas.height = h * scale;
-    const ctx = canvas.getContext('2d');
-    ctx.scale(scale, scale);
-    ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h);
-    ctx.drawImage(img, 0, 0, w, h);
-    URL.revokeObjectURL(url);
-    const a = document.createElement('a');
-    a.download = 'ecosystemos-governance.png';
-    a.href = canvas.toDataURL('image/png');
-    a.click();
-    notify('PNG saved');
-  };
-  img.src = url;
+document.getElementById('file-input').onchange=function(){
+  const file=this.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{try{loadFromJSON(e.target.result);notify('↑ Imported '+file.name);}catch(err){alert('Invalid JSON: '+err.message);}};
+  reader.readAsText(file);this.value='';
 };
-
-// ── FILE INPUT — JSON or Excel ──────────────────────────────
-document.getElementById('file-input').onchange = function() {
-  const file = this.files[0]; if (!file) return;
-  const name = file.name.toLowerCase();
-  if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
-    const reader = new FileReader();
-    reader.onload = e => { try { importXLSX(e.target.result, file.name); } catch(err) { alert('Excel import error: '+err.message); } };
-    reader.readAsArrayBuffer(file);
-  } else {
-    const reader = new FileReader();
-    reader.onload = e => { try { loadFromJSON(e.target.result); notify('↑ Imported '+file.name); } catch(err) { alert('Invalid JSON: '+err.message); } };
-    reader.readAsText(file);
-  }
-  this.value = '';
-};
-
-// ── DRAG & DROP — JSON or Excel ─────────────────────────────
-document.getElementById('canvas-wrap').addEventListener('dragover', e => e.preventDefault());
-document.getElementById('canvas-wrap').addEventListener('drop', e => {
-  e.preventDefault(); const file = e.dataTransfer.files[0]; if (!file) return;
-  const name = file.name.toLowerCase();
-  if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
-    const reader = new FileReader();
-    reader.onload = ev => { try { importXLSX(ev.target.result, file.name); } catch(err) { alert('Excel import error: '+err.message); } };
-    reader.readAsArrayBuffer(file);
-  } else if (name.endsWith('.json')) {
-    const reader = new FileReader();
-    reader.onload = ev => { try { loadFromJSON(ev.target.result); notify('↑ Dropped '+file.name); } catch(err) { alert('Invalid JSON'); } };
-    reader.readAsText(file);
-  }
+document.getElementById('canvas-wrap').addEventListener('dragover',e=>e.preventDefault());
+document.getElementById('canvas-wrap').addEventListener('drop',e=>{
+  e.preventDefault();const file=e.dataTransfer.files[0];
+  if(!file||!file.name.endsWith('.json'))return;
+  const reader=new FileReader();
+  reader.onload=ev=>{try{loadFromJSON(ev.target.result);notify('↑ Dropped '+file.name);}catch(err){alert('Invalid JSON');}};
+  reader.readAsText(file);
 });
-
-// ── URL IMPORT — JSON or Excel ──────────────────────────────
-(function() {
-  const overlay = document.getElementById('url-import-overlay');
-  const inp = document.getElementById('url-import-input');
-  const status = document.getElementById('url-import-status');
-  const btnLoad = document.getElementById('btn-url-load');
-  const btnCancel = document.getElementById('btn-url-cancel');
-  function open() { inp.value=''; status.textContent=''; overlay.style.display='flex'; setTimeout(()=>inp.focus(),60); }
-  function close() { overlay.style.display='none'; }
-  document.getElementById('btn-import-url').onclick = open;
-  btnCancel.onclick = close;
-  overlay.addEventListener('click', e => { if (e.target===overlay) close(); });
-  async function load() {
-    const url = inp.value.trim();
-    if (!url) { status.textContent='⚠  Paste a URL first.'; return; }
-    status.textContent='Fetching…'; btnLoad.disabled=true;
-    try {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error('HTTP '+res.status+' — '+res.statusText);
-      const lc = url.toLowerCase().split('?')[0];
-      if (lc.endsWith('.xlsx') || lc.endsWith('.xls')) {
-        importXLSX(await res.arrayBuffer(), url.split('/').pop().split('?')[0] || 'graph.xlsx');
-      } else {
-        loadFromJSON(await res.text()); notify('↑ Imported from URL');
-      }
-      close();
-    } catch(err) { status.textContent='✕  '+err.message; }
-    finally { btnLoad.disabled=false; }
-  }
-  btnLoad.onclick = load;
-  inp.addEventListener('keydown', e => { if (e.key==='Enter') load(); });
-  document.addEventListener('keydown', e => {
-    if (e.key==='Escape' && overlay.style.display==='flex') { e.stopImmediatePropagation(); close(); }
-  }, true);
-})();
 
 // ── KEYBOARD SHORTCUTS ─────────────────────────────────────
 document.addEventListener('keydown',e=>{
