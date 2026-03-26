@@ -165,7 +165,7 @@ Essay     →  thesis     → argument          → evidence        → source
 
 ## Changelog
 
-### v1.044 *(current)*
+### v1.045 *(current)*
 - Annotated source with universal schema documentation embedded as comments
 - `_schema` top-level key silently ignored on import — use it to embed diagram rules in JSON
 - Per-view state memory: each view mode (Network, 3D, Importance Rings) remembers its last zoom and camera position independently
