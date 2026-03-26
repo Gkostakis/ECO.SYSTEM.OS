@@ -14,7 +14,7 @@
 <script src="https://unpkg.com/3d-force-graph@1.73.4/dist/3d-force-graph.min.js"></script>
 <style>
 /* ══════════════════════════════════════════════════════════
-   ECO.SYSTEM.OS  ·  Governance Mapper  ·  v1.044
+   ECO.SYSTEM.OS  ·  Governance Mapper  ·  v1.045
    UI: Editorial Swiss — inspired by Pacifica / Harry Atkins
    Palette: Pure white UI · Black canvas · Grayscale midtones
    ══════════════════════════════════════════════════════════ */
@@ -473,7 +473,7 @@ svg#graph:active { cursor: grabbing; }
 /* Mode badge */
 #mode-indicator {
   position: absolute;
-  top: 12px; right: 48px;
+  top: 12px; left: 14px;
   z-index: 50; display: none;
   font-family: var(--font);
   font-size: 7px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase;
@@ -922,7 +922,7 @@ svg#graph:active { cursor: grabbing; }
   color: var(--ink); transition: border-color 0.12s;
 }
 .fg input:focus, .fg textarea:focus, .fg select:focus {
-  border-color: var(--ink); background: #fff;
+  border-color: var(--ink); background: #fff; color: #111;
 }
 .fg select {
   appearance: none; -webkit-appearance: none;
@@ -996,7 +996,7 @@ input#m-importance::-moz-range-thumb {
   outline: none; background: var(--ui-bg2); color: var(--ink);
   transition: border-color 0.12s;
 }
-.ac-inp:focus { border-color: var(--ink); background: #fff; }
+.ac-inp:focus { border-color: var(--ink); background: #fff; color: #111; }
 .ac-sugs {
   position: absolute; top: 100%; left: 0; right: 0; z-index: 300;
   background: var(--ui-bg); border: 1px solid var(--ui-line-hi);
@@ -1322,11 +1322,11 @@ button, .tbtn, .di, .fchip, .mbtn, .ptab, .prop-edit-btn {
   .brand { padding: 0 14px; border-right: none; }
   .brand-meta { display: none; }
 
-  /* Hide all desktop toolbar groups; only add-btn group + hamburger stay */
+  /* Hide all desktop toolbar groups + add-btn group; only hamburger stays */
   #topbar > .tb-group,
   #topbar > .tb-div,
   #topbar > .tb-spacer { display: none !important; }
-  #topbar > .tb-group-add { display: flex !important; }
+  #topbar > .tb-group-add { display: none !important; }
   #btn-mobile-menu { display: flex !important; }
 
   /* Bigger touch targets */
@@ -1409,7 +1409,7 @@ button, .tbtn, .di, .fchip, .mbtn, .ptab, .prop-edit-btn {
   #notif { bottom: 72px; }
 
   /* Mode indicator */
-  #mode-indicator { right: 14px; top: 10px; }
+  #mode-indicator { left: 14px; top: 10px; }
 
   /* Focus exit */
   #btn-focus-exit { font-size: 7px; padding: 5px 12px; }
@@ -1576,7 +1576,6 @@ button, .tbtn, .di, .fchip, .mbtn, .ptab, .prop-edit-btn {
         <button class="di" id="vi-shape-rect"><span class="chk" id="vi-chk-rect"> </span> Cards</button>
         <div class="di-sep"></div>
         <div class="di-head">Color</div>
-        <button class="di" id="vi-color-type"><span class="chk" id="vi-chk-ctype"> </span> Color by Type</button>
         <div class="di" style="cursor:default;user-select:none;">
           <span style="font-size:9px;color:var(--ink-3);flex:1;">Background</span>
           <div style="position:relative;width:24px;height:14px;">
@@ -1585,30 +1584,22 @@ button, .tbtn, .di, .fchip, .mbtn, .ptab, .prop-edit-btn {
             <div id="bg-color-swatch" class="di-color-swatch" style="background:#080808;"></div>
           </div>
         </div>
-        <div class="di" style="cursor:default;user-select:none;">
-          <span style="font-size:9px;color:var(--ink-3);flex:1;">Title</span>
-          <div style="position:relative;width:24px;height:14px;">
-            <input type="color" id="title-color-input" value="#ffffff"
-              style="position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;border:none;padding:0;">
-            <div id="title-color-swatch" class="di-color-swatch" style="background:#ffffff;"></div>
-          </div>
-        </div>
         <div class="di-sep"></div>
         <div class="di-head">View Mode</div>
         <button class="di" id="vi-network"><span class="chk" id="vi-chk-network">✓</span> Network (Default)</button>
         <button class="di" id="vi-3d"><span class="chk" id="vi-chk-3d"> </span> 3D Force Graph</button>
         <button class="di" id="vi-cluster"><span class="chk" id="vi-chk-cluster"> </span> Importance Rings</button>
+        <div class="di-sep"></div>
+        <div class="di-head">Actions</div>
+        <button class="di" id="btn-reset-layout">↺ Relayout</button>
+        <button class="di" id="btn-links-toggle">
+          <svg width="11" height="11" viewBox="0 0 12 12" fill="none" style="flex-shrink:0;">
+            <path id="links-icon-path" d="M2 2h2.5v8H2zM7.5 2H10v8H7.5z" fill="currentColor" opacity="0.6"/>
+          </svg>
+          Links Activity
+        </button>
       </div>
     </div>
-
-    <button class="tbtn" id="btn-links-toggle">
-      <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
-        <path id="links-icon-path" d="M2 2h2.5v8H2zM7.5 2H10v8H7.5z" fill="currentColor" opacity="0.6"/>
-      </svg>
-      Links
-    </button>
-
-    <button class="tbtn" id="btn-reset-layout">Relayout</button>
 
     <button class="tbtn tbtn-icon" id="btn-toggle-filters" title="Toggle filters">
       <svg width="12" height="11" viewBox="0 0 14 12" fill="none">
@@ -1624,12 +1615,12 @@ button, .tbtn, .di, .fchip, .mbtn, .ptab, .prop-edit-btn {
     <button class="tbtn" id="btn-import-json">Import JSON</button>
     <button class="tbtn" id="btn-import-xlsx">Import XLSX</button>
     <button class="tbtn" id="btn-import-url">Import URL</button>
+    <button class="tbtn" id="btn-paste-json">Paste Code</button>
     <div class="drop-wrap" id="save-wrap">
       <button class="tbtn" id="btn-save-menu">Save ▾</button>
       <div class="dropdown right-align" id="save-panel">
         <button class="di" id="save-json">Save as JSON</button>
         <button class="di" id="save-svg">Save as SVG</button>
-        <button class="di" id="save-png">Save as PNG</button>
       </div>
     </div>
     <input type="file" id="file-input" accept=".json" style="display:none">
@@ -1663,7 +1654,7 @@ button, .tbtn, .di, .fchip, .mbtn, .ptab, .prop-edit-btn {
   <div class="md-row">
     <button class="tbtn primary" id="md-btn-add">+ Node</button>
     <button class="tbtn" id="md-btn-visuals">Visuals ▾</button>
-    <button class="tbtn" id="md-btn-links">Links</button>
+    <button class="tbtn" id="md-btn-links">Links Activity</button>
     <button class="tbtn" id="md-btn-relayout">Relayout</button>
     <button class="tbtn" id="md-btn-filters">Filters</button>
   </div>
@@ -1687,8 +1678,7 @@ button, .tbtn, .di, .fchip, .mbtn, .ptab, .prop-edit-btn {
       <button class="tbtn" id="md-vi-rect">▭ Cards</button>
     </div>
     <div class="md-sub-row">
-      <span class="md-sub-label">Color &amp; View</span>
-      <button class="tbtn" id="md-vi-colortype">Color by Type</button>
+      <span class="md-sub-label">View</span>
       <button class="tbtn" id="md-vi-network">Network</button>
       <button class="tbtn" id="md-vi-3d">3D</button>
       <button class="tbtn" id="md-vi-rings">Rings</button>
@@ -1700,20 +1690,12 @@ button, .tbtn, .di, .fchip, .mbtn, .ptab, .prop-edit-btn {
         <div id="md-bg-color-swatch" class="md-color-swatch" style="background:#080808;"></div>
       </div>
     </div>
-    <div class="md-color-row">
-      <span class="md-color-label">Title</span>
-      <div class="md-color-swatch-wrap">
-        <input type="color" id="md-title-color-input" value="#ffffff">
-        <div id="md-title-color-swatch" class="md-color-swatch" style="background:#ffffff;"></div>
-      </div>
-    </div>
   </div>
   <!-- Save sub-panel (toggled inline) -->
   <div id="md-save-panel">
     <div class="md-sub-row">
       <button class="tbtn" id="md-save-json">Save JSON</button>
       <button class="tbtn" id="md-save-svg">Save SVG</button>
-      <button class="tbtn" id="md-save-png">Save PNG</button>
     </div>
   </div>
 </div>
@@ -1856,7 +1838,23 @@ button, .tbtn, .di, .fchip, .mbtn, .ptab, .prop-edit-btn {
 <div id="footer">
   <span class="footer-copy">ECO.SYSTEM.OS · For personal use only</span>
   <span>© Constantinos Tolias 2026</span>
-  <span class="footer-ver">v1.044</span>
+  <span class="footer-ver">v1.045</span>
+</div>
+
+<!-- ══════════ PASTE JSON OVERLAY ══════════════════════════ -->
+<div id="paste-json-overlay" style="display:none;position:fixed;inset:0;z-index:850;align-items:flex-start;justify-content:center;padding-top:90px;background:rgba(0,0,0,0.55);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);">
+  <div style="background:var(--ui-bg);border:1px solid var(--ui-line-hi);width:520px;max-width:calc(100vw - 32px);padding:20px 20px 16px;display:flex;flex-direction:column;gap:10px;box-shadow:0 16px 48px rgba(0,0,0,0.5);">
+    <div style="font-size:8px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--ink-3);margin-bottom:2px;">Paste JSON Code</div>
+    <textarea id="paste-json-input" rows="10" placeholder="Paste the contents of your .json file here…"
+      spellcheck="false" autocomplete="off" autocorrect="off"
+      style="font-family:var(--font);font-size:10px;font-weight:300;letter-spacing:0.2px;padding:8px 10px;border:1px solid var(--ui-line-hi);background:var(--ui-bg2);color:var(--ink);outline:none;width:100%;resize:vertical;transition:border-color 0.12s;min-height:120px;"
+      onfocus="this.style.borderColor='var(--ink)'" onblur="this.style.borderColor='var(--ui-line-hi)'"></textarea>
+    <div id="paste-json-status" style="font-size:9px;font-weight:300;color:var(--ink-3);min-height:14px;letter-spacing:0.3px;"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="mbtn" id="btn-paste-cancel">Cancel</button>
+      <button class="mbtn primary" id="btn-paste-load">Load</button>
+    </div>
+  </div>
 </div>
 
 <!-- ══════════ URL IMPORT OVERLAY ══════════════════════════ -->
@@ -2026,7 +2024,7 @@ button, .tbtn, .di, .fchip, .mbtn, .ptab, .prop-edit-btn {
 </div>
 <script>
 // ════════════════════════════════════════════════════════════
-//  ECO.SYSTEM.OS — Governance Network Mapper  v1.044
+//  ECO.SYSTEM.OS — Governance Network Mapper  v1.045
 // ════════════════════════════════════════════════════════════
 
 // ── Constants ─────────────────────────────────────────────
@@ -2663,29 +2661,6 @@ function showProperties(nodeId) {
   if(n.notes){
     html+=`<div class="prop-sec"><div class="prop-sec-title">Notes</div><div class="prop-notes">${n.notes}</div></div>`;
   }
-  // Links out
-  if((n.linksOut||[]).length){
-    html+='<div class="prop-sec"><div class="prop-sec-title">Links Out →</div><div class="prop-links-list">';
-    (n.linksOut||[]).forEach(tid=>{
-      const tn=nodes.find(x=>x.id===tid);
-      if(!tn)return;
-      const label=n.linkMeta?.[tid]?.label?` · <em style="color:var(--ink-4);font-style:normal;font-size:8px;">${n.linkMeta[tid].label}</em>`:'';
-      html+=`<div class="prop-link-row" onclick="selectNode('${tid}');openModal('${tid}')">
-        <span class="pla">→</span><span>${tn.name}</span>${label}</div>`;
-    });
-    html+='</div></div>';
-  }
-  // Links in
-  if((n.linksIn||[]).length){
-    html+='<div class="prop-sec"><div class="prop-sec-title">Links In ←</div><div class="prop-links-list">';
-    (n.linksIn||[]).forEach(sid=>{
-      const sn=nodes.find(x=>x.id===sid);
-      if(!sn)return;
-      html+=`<div class="prop-link-row" onclick="selectNode('${sid}');openModal('${sid}')">
-        <span class="pla" style="color:var(--ink-4);">←</span><span>${sn.name}</span></div>`;
-    });
-    html+='</div></div>';
-  }
   // Custom properties
   if((n.custom||[]).length){
     html+='<div class="prop-sec"><div class="prop-sec-title">Properties</div><div class="prop-custom">';
@@ -3281,7 +3256,7 @@ function updateTagsTab() {
   sorted.forEach(([tag,count])=>{
     const isA=filterTagText===tag;
     const item=document.createElement('div');item.className='tag-item'+(isA?' active':'');
-    item.innerHTML=`${tag}<span class="tag-count">${count}</span>`;
+    item.innerHTML=`${tag}`;
     item.onclick=()=>{
       filterTagText=filterTagText===tag?'':(tag);
       document.getElementById('filter-tag-input').value=filterTagText;
@@ -3378,17 +3353,6 @@ function updateStatsTab() {
   </div>
   <div class="st-sec"><div class="st-title">Status Distribution</div>
     ${n ? pieRow(statusPie, sortedStatuses, s=>STATUS_COLORS[s]||'#888') : '<div style="font-size:9px;color:var(--ink-4);">No data</div>'}
-  </div>
-  <div class="st-sec"><div class="st-title">Most Connected</div>
-    ${sorted.map(nd=>{
-      const conn=(nd.linksOut||[]).length+(nd.linksIn||[]).length;
-      const tc2=getNodeColor(nd);
-      const impPct=nd.importance;
-      return `<div class="top-row" onclick="selectNode('${nd.id}');switchOverlayTab('properties')">
-        <span class="top-row-name" style="color:${tc2}bb">${nd.name}</span>
-        <span class="top-row-val">${conn} links</span>
-      </div>`;
-    }).join('')}
   </div>`;
 }
 
@@ -3437,6 +3401,7 @@ document.getElementById('btn-zoom-fit').onclick=doZoomFit;
 // ── TOOLBAR ACTIONS ────────────────────────────────────────
 document.getElementById('btn-add').onclick=()=>openModal(uid());
 document.getElementById('btn-reset-layout').onclick=()=>{
+  visualsPanel.classList.remove('show');
   if(is3D && graph3D){
     // Scramble 3D positions so force re-spreads nodes
     const gd = graph3D.graphData();
@@ -3485,15 +3450,8 @@ document.getElementById('vi-shape-circle').onclick=()=>{applyNodeShape('circle')
 document.getElementById('vi-shape-outline').onclick=()=>{applyNodeShape('outline');['circle','outline','rect'].forEach(s=>document.getElementById('vi-chk-'+s).textContent=' ');document.getElementById('vi-chk-outline').textContent='✓';visualsPanel.classList.remove('show');notify('Outline circles');};
 document.getElementById('vi-shape-rect').onclick=()=>{applyNodeShape('rect');['circle','outline','rect'].forEach(s=>document.getElementById('vi-chk-'+s).textContent=' ');document.getElementById('vi-chk-rect').textContent='✓';visualsPanel.classList.remove('show');notify('Card nodes');};
 
-document.getElementById('vi-color-type').addEventListener('click',function(){
-  colorByType=!colorByType;
-  document.getElementById('vi-chk-ctype').textContent=colorByType?'✓':' ';
-  updateNodeStyle(nodeLayer.selectAll('.node-group'));
-  updateLinkStyle(linkLayer.selectAll('.link-path'));
-  if(is3D)refresh3D();
-  else simulation.alpha(0.05).restart();
-  notify(colorByType?'Color by type':'Custom colors');
-});
+// vi-color-type removed from UI; keeping state variable for future use
+// colorByType toggle retained via md-vi-colortype removal
 
 const bgColorInput=document.getElementById('bg-color-input');
 const bgSwatch=document.getElementById('bg-color-swatch');
@@ -3508,6 +3466,7 @@ bgColorInput.addEventListener('change',e=>setCanvasBg(e.target.value));
 
 // Links button: toggle particle animation on/off
 document.getElementById('btn-links-toggle').addEventListener('click', function() {
+  visualsPanel.classList.remove('show');
   linksAnimating = !linksAnimating;
   this.classList.toggle('active', !linksAnimating);
   // Swap icon between pause and play
@@ -3789,7 +3748,7 @@ document.getElementById('vi-cluster').addEventListener('click', function() {
 document.getElementById('btn-save-menu').onclick=e=>{e.stopPropagation();document.getElementById('save-panel').classList.toggle('show');};
 
 function graphToJSON(){
-  return JSON.stringify({version:'1.044',nodes:nodes.map(n=>({...n,vx:0,vy:0,fx:null,fy:null,_dragging:undefined})),links:[],customTypes,customStatuses},null,2);
+  return JSON.stringify({version:'1.045',nodes:nodes.map(n=>({...n,vx:0,vy:0,fx:null,fy:null,_dragging:undefined})),links:[],customTypes,customStatuses},null,2);
 }
 function loadFromJSON(json) {
   const data=typeof json==='string'?JSON.parse(json):json;
@@ -3815,38 +3774,50 @@ document.getElementById('save-svg').onclick=e=>{
   const blob=new Blob([svgStr],{type:'image/svg+xml'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='ecosystemos-governance.svg';a.click();notify('SVG saved');
 };
-document.getElementById('save-png').onclick=e=>{
-  e.stopPropagation();document.getElementById('save-panel').classList.remove('show');
-  if(is3D){notify('⚠ Switch to 2D to export PNG');return;}
-  const svgEl=document.getElementById('graph');
-  const {width:W,height:H}=svgEl.getBoundingClientRect();
-  const ser=new XMLSerializer();
-  let svgStr=ser.serializeToString(svgEl);
-  const bg=getComputedStyle(document.documentElement).getPropertyValue('--canvas-bg').trim()||'#050505';
-  svgStr=svgStr.replace('<svg',`<svg style="background:${bg}"`);
-  const scale=window.devicePixelRatio||2;
-  const canvas=document.createElement('canvas');
-  canvas.width=W*scale; canvas.height=H*scale;
-  const ctx=canvas.getContext('2d');
-  ctx.scale(scale,scale);
-  ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
-  const blob=new Blob([svgStr],{type:'image/svg+xml;charset=utf-8'});
-  const url=URL.createObjectURL(blob);
-  const img=new Image();
-  img.onload=()=>{
-    ctx.drawImage(img,0,0,W,H);
-    URL.revokeObjectURL(url);
-    canvas.toBlob(b=>{
-      const a=document.createElement('a');
-      a.href=URL.createObjectURL(b);
-      a.download='ecosystemos-governance.png';
-      a.click();
-      notify('PNG saved');
-    },'image/png');
+// Save PNG removed from UI
+
+// ── PASTE JSON ─────────────────────────────────────────────
+(function(){
+  const overlay  = document.getElementById('paste-json-overlay');
+  const textarea = document.getElementById('paste-json-input');
+  const status   = document.getElementById('paste-json-status');
+  const btnLoad  = document.getElementById('btn-paste-load');
+  const btnCancel= document.getElementById('btn-paste-cancel');
+
+  function openPasteJSON(){
+    textarea.value='';
+    status.textContent='';
+    overlay.style.display='flex';
+    setTimeout(()=>textarea.focus(),60);
+  }
+  function closePasteJSON(){
+    overlay.style.display='none';
+    textarea.value='';
+    status.textContent='';
+  }
+
+  document.getElementById('btn-paste-json').onclick=openPasteJSON;
+  btnCancel.onclick=closePasteJSON;
+  overlay.addEventListener('click',e=>{ if(e.target===overlay)closePasteJSON(); });
+
+  btnLoad.onclick=function(){
+    const raw=textarea.value.trim();
+    if(!raw){ status.textContent='⚠  Paste JSON content first.'; return; }
+    try{
+      loadFromJSON(raw);
+      notify('↑ Loaded from pasted code');
+      closePasteJSON();
+    }catch(err){
+      status.textContent='✕  Invalid JSON: '+err.message;
+    }
   };
-  img.onerror=()=>{URL.revokeObjectURL(url);notify('⚠ PNG export failed');};
-  img.src=url;
-};
+  textarea.addEventListener('keydown',e=>{ if(e.key==='Escape')closePasteJSON(); });
+
+  // Escape key global handler
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Escape'&&overlay.style.display==='flex'){ closePasteJSON(); }
+  });
+})();
 
 // ── TITLE (NODE LABEL) COLOUR ──────────────────────────────
 const titleColorInput=document.getElementById('title-color-input');
@@ -3855,10 +3826,6 @@ function setNodeLabelColor(color){
   nodeLabelColor=color;
   titleColorSwatch.style.background=color;
   titleColorInput.value=color;
-  const mdSwatch=document.getElementById('md-title-color-swatch');
-  const mdInput=document.getElementById('md-title-color-input');
-  if(mdSwatch)mdSwatch.style.background=color;
-  if(mdInput)mdInput.value=color;
   if(!is3D) d3.selectAll('.node-label').attr('fill',color);
 }
 titleColorInput.addEventListener('input',e=>setNodeLabelColor(e.target.value));
@@ -4117,9 +4084,7 @@ document.getElementById('md-vi-rect').addEventListener('click',()=>{
   ['circle','outline','rect'].forEach(s=>document.getElementById('vi-chk-'+s).textContent=' ');
   document.getElementById('vi-chk-rect').textContent='✓'; notify('Card nodes');
 });
-document.getElementById('md-vi-colortype').addEventListener('click',()=>{
-  document.getElementById('vi-color-type').click();
-});
+// md-vi-colortype removed from mobile drawer
 document.getElementById('md-vi-network').addEventListener('click',()=>{
   closeMobileMenu(); document.getElementById('vi-network').click();
 });
@@ -4136,16 +4101,11 @@ document.getElementById('md-vi-rings').addEventListener('click',()=>{
   const mdBgSwatch=document.getElementById('md-bg-color-swatch');
   mdBgInput.addEventListener('input',e=>{ setCanvasBg(e.target.value); mdBgSwatch.style.background=e.target.value; document.getElementById('bg-color-swatch').style.background=e.target.value; });
   mdBgInput.addEventListener('change',e=>{ setCanvasBg(e.target.value); mdBgSwatch.style.background=e.target.value; document.getElementById('bg-color-swatch').style.background=e.target.value; });
-  const mdTitleInput=document.getElementById('md-title-color-input');
-  const mdTitleSwatch=document.getElementById('md-title-color-swatch');
-  mdTitleInput.addEventListener('input',e=>{ setNodeLabelColor(e.target.value); mdTitleSwatch.style.background=e.target.value; });
-  mdTitleInput.addEventListener('change',e=>{ setNodeLabelColor(e.target.value); mdTitleSwatch.style.background=e.target.value; });
 })();
 
 // ── Mobile Save sub-panel actions ─────────────────────────
 document.getElementById('md-save-json').addEventListener('click',()=>{ closeMobileMenu(); document.getElementById('save-json').click(); });
 document.getElementById('md-save-svg').addEventListener('click',()=>{ closeMobileMenu(); document.getElementById('save-svg').click(); });
-document.getElementById('md-save-png').addEventListener('click',()=>{ closeMobileMenu(); document.getElementById('save-png').click(); });
 
 // ── MOBILE PANEL FAB ───────────────────────────────────────
 document.getElementById('btn-panel-fab').addEventListener('click', () => {
