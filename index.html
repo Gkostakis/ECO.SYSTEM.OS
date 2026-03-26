@@ -67,6 +67,12 @@ html, body {
   html, body { height: 100dvh; }
 }
 
+/* ── CANVAS COLOUR INVERSION ──────────────────────────────── */
+svg#graph.inverted,
+#graph-3d.inverted {
+  filter: invert(1);
+}
+
 /* ══ SCROLLBAR ════════════════════════════════════════════ */
 ::-webkit-scrollbar { width: 3px; height: 3px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -1584,6 +1590,7 @@ button, .tbtn, .di, .fchip, .mbtn, .ptab, .prop-edit-btn {
             <div id="bg-color-swatch" class="di-color-swatch" style="background:#080808;"></div>
           </div>
         </div>
+        <button class="di" id="vi-invert"><span class="chk" id="vi-chk-invert"> </span> Invert Colors</button>
         <div class="di-sep"></div>
         <div class="di-head">View Mode</div>
         <button class="di" id="vi-network"><span class="chk" id="vi-chk-network">✓</span> Network (Default)</button>
@@ -1682,6 +1689,10 @@ button, .tbtn, .di, .fchip, .mbtn, .ptab, .prop-edit-btn {
       <button class="tbtn" id="md-vi-network">Network</button>
       <button class="tbtn" id="md-vi-3d">3D</button>
       <button class="tbtn" id="md-vi-rings">Rings</button>
+    </div>
+    <div class="md-sub-row">
+      <span class="md-sub-label">Color</span>
+      <button class="tbtn" id="md-vi-invert"><span id="md-vi-chk-invert"> </span> Invert</button>
     </div>
     <div class="md-color-row">
       <span class="md-color-label">Background</span>
@@ -3819,17 +3830,49 @@ document.getElementById('save-svg').onclick=e=>{
   });
 })();
 
-// ── TITLE (NODE LABEL) COLOUR ──────────────────────────────
-const titleColorInput=document.getElementById('title-color-input');
-const titleColorSwatch=document.getElementById('title-color-swatch');
-function setNodeLabelColor(color){
-  nodeLabelColor=color;
-  titleColorSwatch.style.background=color;
-  titleColorInput.value=color;
-  if(!is3D) d3.selectAll('.node-label').attr('fill',color);
+// ── INVERT CANVAS COLOURS ──────────────────────────────────
+let colorInverted = false;
+let _preinvertBg = '#050505';
+
+function invertHex(hex) {
+  hex = hex.replace('#','').trim();
+  if(hex.length===3) hex=hex.split('').map(c=>c+c).join('');
+  if(hex.length!==6) return '#f5f5f5';
+  const r=255-parseInt(hex.substr(0,2),16);
+  const g=255-parseInt(hex.substr(2,2),16);
+  const b=255-parseInt(hex.substr(4,2),16);
+  return '#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');
 }
-titleColorInput.addEventListener('input',e=>setNodeLabelColor(e.target.value));
-titleColorInput.addEventListener('change',e=>setNodeLabelColor(e.target.value));
+
+function applyCanvasInvert(on) {
+  const svgEl = document.getElementById('graph');
+  const el3d  = document.getElementById('graph-3d');
+  if(on) {
+    svgEl.classList.add('inverted');
+    el3d.classList.add('inverted');
+    _preinvertBg = getComputedStyle(document.documentElement).getPropertyValue('--canvas-bg').trim() || '#050505';
+    // invert the underlying canvas-wrap bg so no dark fringe shows
+    document.getElementById('canvas-wrap').style.background = invertHex(_preinvertBg);
+    if(graph3D) graph3D.backgroundColor(invertHex(_preinvertBg));
+  } else {
+    svgEl.classList.remove('inverted');
+    el3d.classList.remove('inverted');
+    document.getElementById('canvas-wrap').style.background = '';
+    if(graph3D) graph3D.backgroundColor(_preinvertBg);
+  }
+}
+
+function toggleInvertColors() {
+  colorInverted = !colorInverted;
+  document.getElementById('vi-chk-invert').textContent = colorInverted ? '✓' : ' ';
+  const mdChk = document.getElementById('md-vi-chk-invert');
+  if(mdChk) mdChk.textContent = colorInverted ? '✓' : ' ';
+  applyCanvasInvert(colorInverted);
+  visualsPanel.classList.remove('show');
+  notify(colorInverted ? 'Colors inverted' : 'Colors restored');
+}
+
+document.getElementById('vi-invert').addEventListener('click', toggleInvertColors);
 
 // ── XLSX IMPORT ────────────────────────────────────────────
 // Nodes sheet : id | name | type | status | importance | owners | tags | notes | color | x | y | pinned
@@ -4093,6 +4136,9 @@ document.getElementById('md-vi-3d').addEventListener('click',()=>{
 });
 document.getElementById('md-vi-rings').addEventListener('click',()=>{
   closeMobileMenu(); document.getElementById('vi-cluster').click();
+});
+document.getElementById('md-vi-invert').addEventListener('click',()=>{
+  closeMobileMenu(); toggleInvertColors();
 });
 
 // Mobile colour pickers — sync with desktop
