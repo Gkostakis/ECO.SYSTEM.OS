@@ -14,7 +14,7 @@
 <script src="https://unpkg.com/3d-force-graph@1.73.4/dist/3d-force-graph.min.js"></script>
 <style>
 /* ══════════════════════════════════════════════════════════
-   ECO.SYSTEM.OS  ·  Governance Mapper  ·  v1.045
+   ECO.SYSTEM.OS  ·  Governance Mapper  ·  v1.046
    UI: Editorial Swiss — inspired by Pacifica / Harry Atkins
    Palette: Pure white UI · Black canvas · Grayscale midtones
    ══════════════════════════════════════════════════════════ */
@@ -1567,11 +1567,16 @@ button, .tbtn, .di, .fchip, .mbtn, .ptab, .prop-edit-btn {
   <!-- Create -->
   <div class="tb-group tb-group-add">
     <button class="tbtn primary" id="btn-add">+ Node</button>
+    <button class="tbtn tbtn-icon" id="btn-toggle-filters" title="Toggle filters">
+      <svg width="12" height="11" viewBox="0 0 14 12" fill="none">
+        <path d="M1 1h12M3 6h8M5 11h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+      </svg>
+    </button>
   </div>
 
   <div class="tb-div"></div>
 
-  <!-- Visuals + Links + Relayout + Filters -->
+  <!-- Visuals + Links + Relayout -->
   <div class="tb-group">
     <div class="drop-wrap" id="visuals-wrap">
       <button class="tbtn" id="btn-visuals">Visuals</button>
@@ -1607,22 +1612,22 @@ button, .tbtn, .di, .fchip, .mbtn, .ptab, .prop-edit-btn {
         </button>
       </div>
     </div>
-
-    <button class="tbtn tbtn-icon" id="btn-toggle-filters" title="Toggle filters">
-      <svg width="12" height="11" viewBox="0 0 14 12" fill="none">
-        <path d="M1 1h12M3 6h8M5 11h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
-      </svg>
-    </button>
   </div>
 
   <div class="tb-div"></div>
 
   <!-- Import / Save -->
   <div class="tb-group">
-    <button class="tbtn" id="btn-import-json">Import JSON</button>
-    <button class="tbtn" id="btn-import-xlsx">Import XLSX</button>
-    <button class="tbtn" id="btn-import-url">Import URL</button>
-    <button class="tbtn" id="btn-paste-json">Paste Code</button>
+    <div class="drop-wrap" id="import-wrap">
+      <button class="tbtn" id="btn-import-menu">Import ▾</button>
+      <div class="dropdown" id="import-panel">
+        <div class="di-head">Import</div>
+        <button class="di" id="btn-import-json">Import JSON</button>
+        <button class="di" id="btn-import-xlsx">Import XLSX</button>
+        <button class="di" id="btn-import-url">Import URL</button>
+        <button class="di" id="btn-paste-json">Paste Code</button>
+      </div>
+    </div>
     <div class="drop-wrap" id="save-wrap">
       <button class="tbtn" id="btn-save-menu">Save ▾</button>
       <div class="dropdown right-align" id="save-panel">
@@ -1849,7 +1854,7 @@ button, .tbtn, .di, .fchip, .mbtn, .ptab, .prop-edit-btn {
 <div id="footer">
   <span class="footer-copy">ECO.SYSTEM.OS · For personal use only</span>
   <span>© Constantinos Tolias 2026</span>
-  <span class="footer-ver">v1.045</span>
+  <span class="footer-ver">v1.046</span>
 </div>
 
 <!-- ══════════ PASTE JSON OVERLAY ══════════════════════════ -->
@@ -2035,7 +2040,7 @@ button, .tbtn, .di, .fchip, .mbtn, .ptab, .prop-edit-btn {
 </div>
 <script>
 // ════════════════════════════════════════════════════════════
-//  ECO.SYSTEM.OS — Governance Network Mapper  v1.045
+//  ECO.SYSTEM.OS — Governance Network Mapper  v1.046
 // ════════════════════════════════════════════════════════════
 
 // ── Constants ─────────────────────────────────────────────
@@ -3447,14 +3452,19 @@ document.getElementById('btn-toggle-filters').addEventListener('click',function(
   this.classList.toggle('active',filterBarVisible);
 });
 document.getElementById('btn-help').onclick=openHelp;
-document.getElementById('btn-import-json').onclick=()=>document.getElementById('file-input').click();
+document.getElementById('btn-import-json').onclick=()=>{ document.getElementById('import-panel').classList.remove('show'); document.getElementById('file-input').click(); };
+
+// ── IMPORT DROPDOWN ────────────────────────────────────────
+const importPanel=document.getElementById('import-panel');
+document.getElementById('btn-import-menu').onclick=e=>{e.stopPropagation();importPanel.classList.toggle('show');visualsPanel.classList.remove('show');document.getElementById('save-panel').classList.remove('show');};
 
 // ── VISUALS DROPDOWN ───────────────────────────────────────
 const visualsPanel=document.getElementById('visuals-panel');
-document.getElementById('btn-visuals').onclick=e=>{e.stopPropagation();visualsPanel.classList.toggle('show');};
+document.getElementById('btn-visuals').onclick=e=>{e.stopPropagation();visualsPanel.classList.toggle('show');importPanel.classList.remove('show');document.getElementById('save-panel').classList.remove('show');};
 document.addEventListener('click',e=>{
   if(!document.getElementById('visuals-wrap').contains(e.target))visualsPanel.classList.remove('show');
   if(!document.getElementById('save-wrap').contains(e.target))document.getElementById('save-panel').classList.remove('show');
+  if(!document.getElementById('import-wrap').contains(e.target))importPanel.classList.remove('show');
 });
 
 document.getElementById('vi-shape-circle').onclick=()=>{applyNodeShape('circle');['circle','outline','rect'].forEach(s=>document.getElementById('vi-chk-'+s).textContent=' ');document.getElementById('vi-chk-circle').textContent='✓';visualsPanel.classList.remove('show');notify('Filled circles');};
@@ -3807,7 +3817,7 @@ document.getElementById('save-svg').onclick=e=>{
     status.textContent='';
   }
 
-  document.getElementById('btn-paste-json').onclick=openPasteJSON;
+  document.getElementById('btn-paste-json').onclick=()=>{ importPanel.classList.remove('show'); openPasteJSON(); };
   btnCancel.onclick=closePasteJSON;
   overlay.addEventListener('click',e=>{ if(e.target===overlay)closePasteJSON(); });
 
@@ -3930,7 +3940,7 @@ function importXLSXFile(file){
   };
   reader.readAsArrayBuffer(file);
 }
-document.getElementById('btn-import-xlsx').onclick=()=>document.getElementById('xlsx-input').click();
+document.getElementById('btn-import-xlsx').onclick=()=>{ importPanel.classList.remove('show'); document.getElementById('xlsx-input').click(); };
 document.getElementById('xlsx-input').onchange=function(){importXLSXFile(this.files[0]);this.value=''};
 
 document.getElementById('file-input').onchange=function(){
@@ -3968,7 +3978,7 @@ document.getElementById('canvas-wrap').addEventListener('drop',e=>{
     status.textContent='';
   }
 
-  document.getElementById('btn-import-url').onclick=openURLImport;
+  document.getElementById('btn-import-url').onclick=()=>{ importPanel.classList.remove('show'); openURLImport(); };
   btnCancel.onclick=closeURLImport;
   overlay.addEventListener('click',e=>{ if(e.target===overlay)closeURLImport(); });
 
