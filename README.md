@@ -165,7 +165,7 @@ Essay     →  thesis     → argument          → evidence        → source
 
 ## Changelog
 
-### v1.045 *(current)*
+### v1.046 *(current)*
 - Annotated source with universal schema documentation embedded as comments
 - `_schema` top-level key silently ignored on import — use it to embed diagram rules in JSON
 - Per-view state memory: each view mode (Network, 3D, Importance Rings) remembers its last zoom and camera position independently
@@ -179,14 +179,6 @@ Essay     →  thesis     → argument          → evidence        → source
 - Animated link particles with pause/resume
 - Importance Rings view mode
 - `linkMeta` per-edge label support
-
-### v1.033
-- Initial public release
-- Force-directed network with D3.js
-- 3D WebGL view
-- Properties / Index side panel
-- Save as JSON, SVG, and localStorage
-- Drag & drop JSON import
 
 ---
 
