@@ -1,191 +1,194 @@
 # ECO.SYSTEM.OS
 
-**A browser-based, force-directed network diagram and relationship mapping tool.**
+**Governance Network Mapper** · v1.050
 
-No build step. No server. No installation. Open in any browser.
-
----
-
-## What It Is
-
-ECO.SYSTEM.OS is a single-file, zero-dependency web application for creating, visualising, and navigating relationship networks — nodes connected by directed links, simulated with D3.js physics. It runs entirely in the browser with no backend required.
-
-Use it to map teams, systems, processes, recipes, concepts, dependencies, knowledge graphs, organisations, or any network of interconnected entities.
+> A single-file, browser-based tool for mapping and visualising governance relationships — policies, standards, regulations, roles, systems, risks, controls, assets, and objectives — as an interactive force-directed network.
 
 ---
 
-## Quickstart
+## What it is
 
-1. Download `index.html`
-2. Open it in any modern browser (Chrome, Firefox, Safari, Edge)
-3. Click **+ Node** to start building — or **Import** a saved `.json` file
+ECO.SYSTEM.OS is a self-contained HTML application. There is no server, no build step, no login. Open the file in a browser and start mapping.
 
-That's it.
+It was built for practitioners who need to see governance as a system — not as a document. The graph reveals structural gaps, orphaned nodes, over-centralised roles, and missing controls that lists and spreadsheets never surface.
 
 ---
 
 ## Features
 
-### Network Editing
-- **Add nodes** with name, type, status, importance (1–100), color, tags, notes, and custom key-value properties
-- **Create directed links** between nodes with optional relationship labels
-- **Drag** nodes freely on the canvas; **pin** them in place
-- **Double-click** or **right-click** a node to open the editor
-- **Delete** nodes with single-step undo (`Ctrl+Z`)
-
-### Visualisation
-- **Force-directed layout** — nodes simulate physical repulsion and link attraction via D3.js
-- **3D Force Graph** — full 3D WebGL view
-- **Importance Rings** — concentric ring layout grouping nodes by importance tier
-- **Animated link particles** — directional flow along every link (toggle pause/play with the Links button)
-- **Node shapes** — filled circles, outline circles, or cards (rectangles)
-- **Color by Type** — assigns distinct colours per node type
-- **Canvas background** — custom colour picker
-
-### Properties Panel
-- Click any node to inspect **type, status, importance, tags, notes, custom properties,** and connections
-- Navigate between **Properties / Index / Tags / Stats** tabs
-- **Index** tab ranks all nodes by importance and connection count
-- **Stats** tab shows graph metrics, pie charts, and most-connected nodes
-
-### Search & Filter
-- **Inline search bar** — dims non-matching nodes in real time
-- **Ctrl+K Quick Switcher** — keyboard-navigable node search overlay
-- **Filter bar** — filter by type, status, tag, or orphan nodes
-
-### Save & Load
-- **Save as JSON** — full portable graph export
-- **Save as SVG** — vector export of the 2D canvas
-- **Browser storage** — auto-saves to `localStorage`; manual save/load supported
-- **Drag & drop** — drop any `.json` file onto the canvas to import
-
-### Keyboard Shortcuts
-
-| Key | Action |
+| Capability | Detail |
 |---|---|
-| `Ctrl+K` | Quick node switcher |
-| `F` | Focus mode on hovered node |
-| `Esc` | Close modal / exit focus mode |
-| `Ctrl+Z` | Undo last deletion |
-| `Dbl-click` | Edit node |
-| `Right-click` | Edit node |
-| `?` | Keyboard shortcuts help |
+| **Force-directed graph** | D3.js-powered, physics-simulated node layout |
+| **Node types** | Policy, Standard, Regulation, Role, System, Risk, Control, Asset, Objective, and custom types |
+| **Node properties** | Label, type, status, importance (0–100), description, tags, owners, custom fields |
+| **Visual encoding** | Node size scales with importance; colour encodes type and status |
+| **Relationship arrows** | Per-link coloured SVG markers with metadata support |
+| **Type Clusters view** | Group nodes spatially by type |
+| **3D force graph** | Toggle to full 3D canvas (three.js via `3d-force-graph`) |
+| **Timeline Arc view** | Temporal layout mode |
+| **XLSX import** | Bulk-load nodes from a spreadsheet (SheetJS) |
+| **PNG export** | 2× pixel density canvas snapshot |
+| **Persistent storage** | Supabase (cloud) + localStorage (local) with auto-save |
+| **URL-addressable maps** | Every map gets a stable `?mapId=` URL |
+| **Embed mode** | Read-only `?embed=1` iframe-safe rendering |
+| **Edit-key gate** | Optional `?edit=<key>` write protection per map |
+| **Single-file architecture** | Everything in one `.html` — no dependencies to install |
 
 ---
 
-## Technology
+## Quick start
 
-| Library | Version | Purpose |
-|---|---|---|
-| [D3.js](https://d3js.org) | 7.8.5 | Force simulation, SVG rendering, zoom |
-| [3d-force-graph](https://github.com/vasturiano/3d-force-graph) | 1.73.4 | 3D WebGL graph |
-| [GSAP](https://gsap.com) | 3.12.2 | UI animations |
-| [Sunflower](https://fonts.google.com/specimen/Sunflower) | — | Typography (Google Fonts) |
+1. Download `index.html`
+2. Open it in any modern browser (Chrome, Firefox, Safari, Edge)
+3. Click **+** to add your first node
+4. Double-click any node to edit its properties
+5. Drag nodes to arrange the layout
 
-All libraries loaded from CDN. No npm, no bundler, no local dependencies.
+No internet connection required for local use.
 
 ---
 
-## File Structure
+## Persistence & sharing (optional)
 
+By default the app saves to `localStorage` only — your map lives in the browser.
+
+To enable cloud persistence, URL sharing, and embeds, connect a free [Supabase](https://supabase.com) project.
+
+### 1 · Create the database table
+
+Run this once in the Supabase SQL editor:
+
+```sql
+create table if not exists maps (
+  id          text primary key,
+  data        jsonb not null,
+  edit_key    text,
+  created_at  timestamptz default now(),
+  updated_at  timestamptz default now()
+);
+
+alter table maps enable row level security;
+create policy "public read"   on maps for select using (true);
+create policy "public upsert" on maps for insert with check (true);
+create policy "public update" on maps for update using (true);
 ```
-index.html   ← the entire application (HTML + CSS + JS, single file)
-README.md    ← this file
+
+### 2 · Add your project credentials
+
+Open `index.html` and find these two lines near the bottom of the `<script>` block:
+
+```js
+const ECO_SUPABASE_URL  = '';   // → Settings → API → Project URL
+const ECO_SUPABASE_ANON = '';   // → Settings → API → anon / public key
 ```
 
+Paste your values. The anon key is safe to include — Supabase row-level security controls access.
+
+### 3 · Done
+
+Auto-save begins immediately. Every change is debounced (1.2 s) and written to Supabase. The URL updates to include a stable `?mapId=` parameter you can share directly.
+
 ---
 
-## Browser Support
+## URL patterns
 
-All modern evergreen browsers. WebGL required for 3D mode.
+| URL | Behaviour |
+|---|---|
+| `index.html` | Creates a new map with a generated ID; begins auto-saving |
+| `index.html?mapId=map_abc123` | Loads the exact saved layout; resumes auto-saving |
+| `index.html?mapId=map_abc123&embed=1` | Read-only, no chrome — safe for `<iframe>` embedding |
+| `index.html?mapId=map_abc123&edit=mykey` | Enables editing only when the key matches `edit_key` in the database |
 
 ---
 
-## Data Format
+## Embedding
 
-JSON files follow this structure. The `_schema` key is optional — it is stripped on import and can be used to embed documentation or universal diagram rules alongside your data.
+```html
+<iframe
+  src="index.html?mapId=YOUR_MAP_ID&embed=1"
+  width="100%"
+  height="600"
+  style="border:none;">
+</iframe>
+```
+
+The layout is fully deterministic in embed mode — node positions are stored explicitly (no re-simulation on load).
+
+---
+
+## State model
+
+The canonical state object saved to Supabase and localStorage:
 
 ```json
 {
-  "_schema": { },
-  "version": "1.041",
+  "version": "1.050",
   "nodes": [
-    {
-      "id": "n1a2b3c4",
-      "name": "Node Name",
-      "type": "System",
-      "status": "Active",
-      "importance": 75,
-      "color": "#2203ff",
-      "owners": ["Alice"],
-      "tags": ["core"],
-      "notes": "One-sentence qualitative note.",
-      "linksOut": ["n5d6e7f8"],
-      "linksIn": [],
-      "custom": [{ "key": "Version", "val": "2.1" }],
-      "linkMeta": { "n5d6e7f8": { "label": "depends on" } },
-      "pinned": false,
-      "updatedAt": "2026-03-05T10:00:00.000Z"
-    }
+    { "id": "…", "label": "…", "type": "…", "status": "…", "importance": 50, "x": 120, "y": -84 }
   ],
   "links": [],
-  "customTypes": ["Dish", "Process", "Ingredient"],
-  "customStatuses": []
+  "customTypes": [],
+  "customStatuses": [],
+  "viewport": { "k": 1, "x": 0, "y": 0 },
+  "metadata": { "savedAt": "2026-…", "nodeCount": 12 }
 }
 ```
 
-**Key rules:**
-- `nodes` is the source of truth. `links` is always rebuilt from `linksOut` on import — do not hand-craft it.
-- `importance` maps to visual node size: `1` → 8px radius, `100` → 58px. Spread the full range intentionally.
-- `linksOut` holds IDs of nodes this node governs or flows into. `linksIn` is derived automatically.
-- `customTypes` and `customStatuses` are merged with the app defaults on import.
-
-### Universal Diagram Structure
-
-ECO.SYSTEM.OS works for any domain using a consistent 4-tier model:
-
-| Tier | Role | Importance | `linksIn` |
-|---|---|---|---|
-| **0 · Root** | The central thesis, product, or entity | 100 | `[]` |
-| **1 · Components** | Major pillars or subsystems | 60–95 | `[root_id]` |
-| **2 · Processes** | Transformations, methods, workflows | 40–92 | `[component_id]` |
-| **3 · Atoms** | Irreducible elements — ingredients, people, tasks, sources | 1–100 | `[process_id]` |
-
-This maps to any domain:
-
-```
-Recipe    →  dish       → ingredient group  → cooking method  → ingredient
-Org       →  company    → department        → workflow        → person / role
-Project   →  goal       → milestone         → task            → asset / file
-System    →  product    → module            → function        → dependency
-Essay     →  thesis     → argument          → evidence        → source
-```
+`x` and `y` are always stored explicitly. Layout is never recalculated from scratch on load — the simulation runs at `alpha: 0.08` to settle immediately without drift.
 
 ---
 
-## Changelog
+## Architecture
 
-### v1.046 *(current)*
-- Annotated source with universal schema documentation embedded as comments
-- `_schema` top-level key silently ignored on import — use it to embed diagram rules in JSON
-- Per-view state memory: each view mode (Network, 3D, Importance Rings) remembers its last zoom and camera position independently
-- Node-position snapshots saved on view departure, restored on return
-- Auto zoom-fit on load respects pre-positioned JSON coordinates
-- Mobile layout: hamburger drawer, panel FAB, double-tap to edit
-- Filter bar: type chips, status dropdown, tag text input, orphan filter
-- Quick Switcher overlay (Ctrl+K)
-- Stats panel with pie charts and graph metrics
-- Tags panel with tag cloud
-- Animated link particles with pause/resume
-- Importance Rings view mode
-- `linkMeta` per-edge label support
+ECO.SYSTEM.OS is intentionally a **single HTML file**. All logic — graph engine, UI, persistence — lives in one document. There is no build toolchain, no package manager, no framework.
 
----
+External libraries are loaded from CDN:
 
-## License
+| Library | Purpose |
+|---|---|
+| [D3.js v7](https://d3js.org) | Force-directed graph, zoom, drag |
+| [3d-force-graph](https://github.com/vasturiano/3d-force-graph) | 3D canvas view |
+| [SheetJS](https://sheetjs.com) | XLSX import |
+| [GSAP](https://gsap.com) | UI animations |
+| [Supabase REST API](https://supabase.com/docs/guides/api) | Cloud persistence (optional) |
 
-For personal and internal use. Not licensed for commercial redistribution.
+Fonts: [Syne](https://fonts.google.com/specimen/Syne) · [DM Mono](https://fonts.google.com/specimen/DM+Mono) · [Sunflower](https://fonts.google.com/specimen/Sunflower) via Google Fonts.
 
 ---
 
-*ECO.SYSTEM.OS — GOVERNANCE MAPPER · © Constantinos Tolias 2026*
+## Design
+
+The visual language is Swiss editorial — dark canvas (`#0a0a0a`), electric lime accent (`#c8ff00`), tight typographic hierarchy. The UI chrome is deliberately minimal so the graph commands full attention.
+
+Inspired by: Pacifica / Harry Atkins · Flowsint · Awwwards editorial direction.
+
+---
+
+## Keyboard & interaction reference
+
+| Interaction | Action |
+|---|---|
+| Click node | Select |
+| Double-click node | Open property editor |
+| Right-click node | Open property editor |
+| Drag node | Reposition (pins on release) |
+| Click canvas | Deselect |
+| Scroll / pinch | Zoom |
+| Drag canvas | Pan |
+| Double-tap (mobile) | Open property editor |
+
+---
+
+## Licence
+
+© 2026 Constantinos Tolias. ECO.SYSTEM.OS
+
+Licensed under [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/) — free for personal and non-commercial use.
+Commercial use by organisations requires written permission from the author.
+
+---
+
+## Author
+
+**Constantinos Tolias**
+ECO.SYSTEM.OS is an independent project.
