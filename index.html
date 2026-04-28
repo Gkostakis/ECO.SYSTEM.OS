@@ -1,3 +1,8 @@
+<!--
+  © 2026 Constantinos Tolias. ECO.SYSTEM.OS
+  Licensed under CC BY-NC 4.0 — free for personal and non-commercial use.
+  Commercial use by organisations requires written permission from the author.
+-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -14,7 +19,7 @@
 <script src="https://unpkg.com/3d-force-graph@1.73.4/dist/3d-force-graph.min.js"></script>
 <style>
 /* ══════════════════════════════════════════════════════════
-   ECO.SYSTEM.OS  ·  Governance Mapper  ·  v1.046
+   ECO.SYSTEM.OS  ·  Governance Mapper  ·  v1.050
    UI: Editorial Swiss — inspired by Pacifica / Harry Atkins
    Palette: Pure white UI · Black canvas · Grayscale midtones
    ══════════════════════════════════════════════════════════ */
@@ -1854,7 +1859,7 @@ button, .tbtn, .di, .fchip, .mbtn, .ptab, .prop-edit-btn {
 <div id="footer">
   <span class="footer-copy">ECO.SYSTEM.OS · For personal use only</span>
   <span>© Constantinos Tolias 2026</span>
-  <span class="footer-ver">v1.046</span>
+  <span class="footer-ver">v1.050</span>
 </div>
 
 <!-- ══════════ PASTE JSON OVERLAY ══════════════════════════ -->
@@ -2040,7 +2045,7 @@ button, .tbtn, .di, .fchip, .mbtn, .ptab, .prop-edit-btn {
 </div>
 <script>
 // ════════════════════════════════════════════════════════════
-//  ECO.SYSTEM.OS — Governance Network Mapper  v1.046
+//  ECO.SYSTEM.OS — Governance Network Mapper  v1.050
 // ════════════════════════════════════════════════════════════
 
 // ── Constants ─────────────────────────────────────────────
@@ -3769,7 +3774,7 @@ document.getElementById('vi-cluster').addEventListener('click', function() {
 document.getElementById('btn-save-menu').onclick=e=>{e.stopPropagation();document.getElementById('save-panel').classList.toggle('show');};
 
 function graphToJSON(){
-  return JSON.stringify({version:'1.045',nodes:nodes.map(n=>({...n,vx:0,vy:0,fx:null,fy:null,_dragging:undefined})),links:[],customTypes,customStatuses},null,2);
+  return JSON.stringify({version:'1.050',nodes:nodes.map(n=>({...n,x:n.x||0,y:n.y||0,vx:0,vy:0,fx:null,fy:null,_dragging:undefined})),links:[],customTypes,customStatuses},null,2);
 }
 function loadFromJSON(json) {
   const data=typeof json==='string'?JSON.parse(json):json;
@@ -3778,7 +3783,10 @@ function loadFromJSON(json) {
   if(data.customStatuses)customStatuses=[...new Set([...customStatuses,...data.customStatuses])];
   updateGraph(true);
 }
-function autoSave(){try{localStorage.setItem(STORAGE_KEY,graphToJSON());}catch(e){}}
+function autoSave(){
+  try{ localStorage.setItem(STORAGE_KEY, graphToJSON()); }catch(e){}
+  scheduleSupabaseSave();
+}
 
 document.getElementById('save-json').onclick=e=>{
   e.stopPropagation();document.getElementById('save-panel').classList.remove('show');
@@ -4027,7 +4035,7 @@ document.addEventListener('keydown',e=>{
 });
 
 // ── INIT ───────────────────────────────────────────────────
-window.addEventListener('load',()=>{
+window.addEventListener('load', async () => {
   initGraph();
   // Setup autocomplete for type & status
   initAutocomplete('m-type','m-type-suggestions',allTypes,t=>TYPE_COLORS[t]||'#a0a0a0');
@@ -4035,13 +4043,23 @@ window.addEventListener('load',()=>{
   // Init importance slider fill
   const impSlider=document.getElementById('m-importance');
   impSlider.style.background=`linear-gradient(to right, var(--ink) 0%, var(--ink) 50%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.1) 100%)`;
-  updateGraph(false);
-  // Auto-fit once the simulation has run enough ticks to spread nodes,
-  // ensuring the full canvas is used regardless of saved positions or
-  // layout timing.
-  if(nodes.length) {
-    setTimeout(doZoomFit, 600);
+
+  // ── Supabase / URL boot ────────────────────────────────────
+  window._mapId = ecoGetMapId();
+  applyEmbedMode();
+
+  const canEdit = await ecoCheckEditAccess(window._mapId);
+  if (!canEdit) { ecoLockUI(); }
+
+  const persistedState = await ecoLoadState(window._mapId);
+  if (persistedState) {
+    ecoApplyPersistedState(persistedState);
+  } else {
+    updateGraph(false);
   }
+
+  // Auto-fit once simulation has settled
+  if(nodes.length) { setTimeout(doZoomFit, 700); }
 });
 window.addEventListener('resize',()=>{
   if(simulation)simulation.force('center',d3.forceCenter(0,0)).alpha(0.1).restart();
@@ -4185,6 +4203,313 @@ document.getElementById('btn-panel-fab').addEventListener('click', () => {
     lastTap=now; lastGroup=grp;
   },{passive:false});
 })();
+
+// ════════════════════════════════════════════════════════════
+//  ECO.SYSTEM.OS — PERSISTENCE LAYER  (Supabase + localStorage)
+//  Hooks: autoSave → scheduleSupabaseSave (debounced 1 200 ms)
+//         load     → ecoLoadState (Supabase → localStorage)
+//         URL      → ?mapId=  /  embed mode: ?embed=1
+//         edit key → ?edit=<key>  (optional per-map write gate)
+// ════════════════════════════════════════════════════════════
+
+// ── CONFIGURATION ──────────────────────────────────────────
+// Replace the empty strings below with your Supabase project values.
+// The anon key is safe to include here (row-level security controls access).
+//
+//   SUPABASE_URL     → Settings → API → Project URL
+//   SUPABASE_ANON_KEY → Settings → API → anon / public key
+//
+// Table DDL (run once in Supabase SQL editor):
+//
+//   create table if not exists maps (
+//     id          text primary key,
+//     data        jsonb not null,
+//     edit_key    text,
+//     created_at  timestamptz default now(),
+//     updated_at  timestamptz default now()
+//   );
+//
+//   -- Enable anonymous read + upsert (no auth required)
+//   alter table maps enable row level security;
+//   create policy "public read"   on maps for select using (true);
+//   create policy "public upsert" on maps for insert with check (true);
+//   create policy "public update" on maps for update using (true);
+
+const ECO_SUPABASE_URL     = '';   // e.g. 'https://abcdefgh.supabase.co'
+const ECO_SUPABASE_ANON    = '';   // your project anon key
+const ECO_SUPABASE_TABLE   = 'maps';
+
+// ── serializeState ─────────────────────────────────────────
+// Produces the canonical state object including explicit x/y.
+function serializeState() {
+  return {
+    version: '1.050',
+    nodes: nodes.map(n => ({
+      ...n,
+      x:  n.x  || 0,
+      y:  n.y  || 0,
+      vx: 0, vy: 0, fx: null, fy: null,
+      _dragging: undefined
+    })),
+    links: [],
+    customTypes,
+    customStatuses,
+    viewport: {
+      k: zoomTransform ? zoomTransform.k : 1,
+      x: zoomTransform ? zoomTransform.x : 0,
+      y: zoomTransform ? zoomTransform.y : 0
+    },
+    metadata: {
+      savedAt:   new Date().toISOString(),
+      nodeCount: nodes.length
+    }
+  };
+}
+
+// ── saveToSupabase ─────────────────────────────────────────
+async function ecoSaveToSupabase(mapId, state) {
+  if (!ECO_SUPABASE_URL || !ECO_SUPABASE_ANON) return;
+  try {
+    const res = await fetch(`${ECO_SUPABASE_URL}/rest/v1/${ECO_SUPABASE_TABLE}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey':        ECO_SUPABASE_ANON,
+        'Authorization': 'Bearer ' + ECO_SUPABASE_ANON,
+        'Prefer':        'resolution=merge-duplicates'
+      },
+      body: JSON.stringify({
+        id:         mapId,
+        data:       state,
+        updated_at: new Date().toISOString()
+      })
+    });
+    if (!res.ok) console.warn('[eco] Supabase save failed:', res.status, await res.text());
+  } catch(e) {
+    console.warn('[eco] Supabase save error:', e);
+  }
+}
+
+// ── saveState ──────────────────────────────────────────────
+// Writes to both localStorage (sync) and Supabase (async).
+async function ecoSaveState(mapId, state) {
+  try { localStorage.setItem(STORAGE_KEY + '_' + mapId, JSON.stringify(state)); } catch(e) {}
+  await ecoSaveToSupabase(mapId, state);
+}
+
+// ── loadState ──────────────────────────────────────────────
+// Returns parsed state object, or null if nothing found.
+async function ecoLoadState(mapId) {
+  // 1 — Try Supabase
+  if (ECO_SUPABASE_URL && ECO_SUPABASE_ANON) {
+    try {
+      const res = await fetch(
+        `${ECO_SUPABASE_URL}/rest/v1/${ECO_SUPABASE_TABLE}?id=eq.${encodeURIComponent(mapId)}&select=data&limit=1`,
+        {
+          headers: {
+            'apikey':        ECO_SUPABASE_ANON,
+            'Authorization': 'Bearer ' + ECO_SUPABASE_ANON
+          }
+        }
+      );
+      if (res.ok) {
+        const rows = await res.json();
+        if (rows.length && rows[0].data) return rows[0].data;
+      }
+    } catch(e) {
+      console.warn('[eco] Supabase load error:', e);
+    }
+  }
+
+  // 2 — Fall back to localStorage (map-scoped key first, then legacy key)
+  try {
+    const scopedRaw = localStorage.getItem(STORAGE_KEY + '_' + mapId);
+    if (scopedRaw) return JSON.parse(scopedRaw);
+    // Legacy: single-slot save from the original autoSave (no mapId in key)
+    const legacyRaw = localStorage.getItem(STORAGE_KEY);
+    if (legacyRaw) return JSON.parse(legacyRaw);
+  } catch(e) {}
+
+  return null;
+}
+
+// ── ecoApplyPersistedState ─────────────────────────────────
+// Loads a persisted state object deterministically:
+// positions are restored and simulation runs with very low alpha
+// so nodes barely drift from their saved coordinates.
+function ecoApplyPersistedState(data) {
+  nodes = (data.nodes || []).map(n => ({
+    ...n,
+    linksOut:  n.linksOut  || [],
+    linksIn:   n.linksIn   || [],
+    custom:    n.custom    || [],
+    tags:      n.tags      || [],
+    owners:    n.owners    || [],
+    linkMeta:  n.linkMeta  || {},
+    x: n.x != null ? n.x : (Math.random() - 0.5) * 320,
+    y: n.y != null ? n.y : (Math.random() - 0.5) * 320
+  }));
+
+  if (data.customTypes)    customTypes    = [...new Set([...customTypes,    ...data.customTypes])];
+  if (data.customStatuses) customStatuses = [...new Set([...customStatuses, ...data.customStatuses])];
+
+  // Snapshot positions so the network-view restore path honours them
+  savedNetworkPositions = {};
+  nodes.forEach(n => { savedNetworkPositions[n.id] = { x: n.x, y: n.y }; });
+
+  // Rebuild visual graph — animate=false keeps alpha low (0.3 → decays to 0 quickly)
+  rebuildLinks(); updateStatus(); updateEmptyHint();
+  buildTypeChips(); buildStatusFilter();
+  if (is3D) { refresh3D(); }
+  else {
+    // Re-render nodes/links (same as updateGraph but we set alpha ourselves)
+    const linkData = linkLayer.selectAll('.link-path').data(links, d => {
+      const sid = typeof d.source==='object'?d.source.id:d.source;
+      const tid = typeof d.target==='object'?d.target.id:d.target;
+      return sid+'->'+tid;
+    });
+    linkData.join(
+      enter => enter.append('path').attr('class','link-path').call(updateLinkStyle),
+      update => update.call(updateLinkStyle),
+      exit => exit.remove()
+    );
+    const nodeData = nodeLayer.selectAll('.node-group').data(nodes, d => d.id);
+    nodeData.join(
+      enter => {
+        const grp = enter.append('g').attr('class','node-group')
+          .attr('transform', d => `translate(${d.x||0},${d.y||0})`)
+          .call(d3.drag().on('start',dragStart).on('drag',dragged).on('end',dragEnd))
+          .on('click',(e,d)=>{e.stopPropagation();if(e.detail===1){setTimeout(()=>{if(e.detail===1)selectNode(d.id);},200);}})
+          .on('dblclick',(e,d)=>{e.preventDefault();e.stopPropagation();openModal(d.id);})
+          .on('contextmenu',(e,d)=>{e.preventDefault();openModal(d.id);})
+          .on('mouseenter',(e,d)=>{hoveredNodeId=d.id;showTooltip(e,d);})
+          .on('mousemove',moveTooltip)
+          .on('mouseleave',()=>{hoveredNodeId=null;hideTooltip();});
+        grp.append('circle').attr('class','node-shape').attr('r',d=>nodeRadius(d.importance));
+        grp.append('text').attr('class','node-label');
+        updateNodeStyle(grp); updateNodeLabels(grp);
+        return grp;
+      },
+      update => { update.select('.node-shape').attr('r',d=>nodeRadius(d.importance)); updateNodeStyle(update); updateNodeLabels(update); return update; },
+      exit => exit.remove()
+    );
+    nodeLayer.selectAll('.node-group').each(function(d){
+      const grp=d3.select(this);
+      grp.select('.pin-ring').remove();
+      grp.classed('selected-node', d.id===selectedNodeId);
+      if(d.pinned){ const r2=nodeRadius(d.importance)+5; grp.insert('circle','text').attr('class','pin-ring').attr('r',r2); d.fx=d.x; d.fy=d.y; }
+      else if(!d._dragging){ d.fx=null; d.fy=null; }
+    });
+    simulation.nodes(nodes);
+    simulation.force('link').links(links);
+    // Very low alpha → nodes settle almost immediately without drifting
+    simulation.alpha(0.08).alphaDecay(0.05).restart();
+  }
+
+  // Restore viewport
+  if (data.viewport && zoomBehavior && svg2D) {
+    setTimeout(() => {
+      const t = d3.zoomIdentity
+        .translate(data.viewport.x || 0, data.viewport.y || 0)
+        .scale(data.viewport.k  || 1);
+      svg2D.call(zoomBehavior.transform, t);
+    }, 120);
+  }
+}
+
+// ── Debounced Supabase save ─────────────────────────────────
+// Called by autoSave(). Waits 1 200 ms after the last edit before writing.
+let _ecoSaveTimer = null;
+function scheduleSupabaseSave() {
+  if (!window._mapId) return;
+  clearTimeout(_ecoSaveTimer);
+  _ecoSaveTimer = setTimeout(() => {
+    const state = serializeState();
+    ecoSaveState(window._mapId, state);
+  }, 1200);
+}
+
+// ── URL / mapId handling ────────────────────────────────────
+function ecoGetMapId() {
+  const params = new URLSearchParams(window.location.search);
+  let mapId = params.get('mapId');
+  if (!mapId) {
+    // Generate a new stable ID and put it in the URL (no reload)
+    mapId = 'map_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+    const url = new URL(window.location.href);
+    url.searchParams.set('mapId', mapId);
+    window.history.replaceState({}, '', url.toString());
+  }
+  return mapId;
+}
+
+// ── Embed mode ──────────────────────────────────────────────
+// Activated with ?embed=1  (or ?embed)
+// Hides all editing chrome; graph is read-only and layout-stable.
+function applyEmbedMode() {
+  const params = new URLSearchParams(window.location.search);
+  if (!params.has('embed')) return;
+
+  // Hide chrome
+  ['topbar','statusbar','footer'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  // Expand canvas to fill full viewport
+  const cw = document.getElementById('canvas-wrap');
+  if (cw) { cw.style.flex = '1'; cw.style.height = '100vh'; }
+
+  // Block editing interactions once nodes are rendered
+  // We use a MutationObserver so it catches nodes added after load too
+  const obs = new MutationObserver(() => {
+    document.querySelectorAll('.node-group').forEach(el => {
+      el.style.pointerEvents = 'none';
+    });
+    document.querySelectorAll('.link-path').forEach(el => {
+      el.style.pointerEvents = 'none';
+    });
+  });
+  obs.observe(document.getElementById('nodes-layer'), { childList: true });
+
+  // Disable canvas-click "add node" triggers if any
+  document.getElementById('graph').style.cursor = 'default';
+}
+
+// ── Edit-key gate ───────────────────────────────────────────
+// If the map row has an edit_key set, writing is only allowed when
+// ?edit=<key> is present in the URL. Returns true if editing is allowed.
+async function ecoCheckEditAccess(mapId) {
+  if (!ECO_SUPABASE_URL || !ECO_SUPABASE_ANON) return true; // no Supabase → always editable
+  try {
+    const res = await fetch(
+      `${ECO_SUPABASE_URL}/rest/v1/${ECO_SUPABASE_TABLE}?id=eq.${encodeURIComponent(mapId)}&select=edit_key&limit=1`,
+      { headers: { 'apikey': ECO_SUPABASE_ANON, 'Authorization': 'Bearer ' + ECO_SUPABASE_ANON } }
+    );
+    if (!res.ok) return true;
+    const rows = await res.json();
+    if (!rows.length || !rows[0].edit_key) return true; // no key set → public edit
+    const params = new URLSearchParams(window.location.search);
+    return params.get('edit') === rows[0].edit_key;
+  } catch(e) { return true; }
+}
+
+// ── ecoLockUI ──────────────────────────────────────────────
+// Called when edit_key is set but not provided (or wrong).
+// Disables all write interactions without changing the visual layout.
+function ecoLockUI() {
+  // Override the save hooks so edits made in memory don't persist remotely
+  window._ecoLocked = true;
+  const origSchedule = scheduleSupabaseSave;
+  window.scheduleSupabaseSave = () => {}; // no-op remote saves
+
+  // Hide the Add Node button and Save panel
+  const addBtn = document.getElementById('btn-add');
+  if (addBtn) addBtn.style.display = 'none';
+  const saveMenu = document.getElementById('btn-save-menu');
+  if (saveMenu) saveMenu.style.display = 'none';
+
+  notify('Read-only · pass ?edit=<key> to edit', 4000);
+}
 </script>
 </body>
 </html>
